@@ -32,3 +32,13 @@ extra:
 # Page tree
 nav:
   - Home: index.md
+
+# Enable math (req. python-markdown-math)
+extra_javascript: 
+  - javascript/config.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
