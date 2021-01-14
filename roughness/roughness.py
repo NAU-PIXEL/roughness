@@ -40,7 +40,7 @@ def visible_slopes(theta, azimuth, slope, dist="rms", ntheta=90, naz=360):
 
     # Get raw slope distribution and correct for viewing geometry
     slopes = slope_dist(theta_surf, slope, dist)
-    vis_slopes = slopes * cos_surf_sc / cos(theta)
+    vis_slopes = slopes * cos_surf_sc / cos(theta_surf)
     # vis_slopes[vis_slopes < 0] = 0
 
     return vis_slopes

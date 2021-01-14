@@ -60,17 +60,17 @@ def test_visible_slopes_shape():
     assert visible_slopes(0, 0, 20, ntheta=41, naz=183).shape == (183, 41)
 
 
-def test_visible_slopes_low_emiss():
-    """Test visible_slopes at low emission angle."""
+def test_visible_slopes_zero_emiss():
+    """Test visible_slopes equal slope dist at 0 emission angle."""
     actual = visible_slopes(0, 0, 20, ntheta=3, naz=2)
-    expected = np.array(
-        [[0, 0.09663027, 0.12822571], [0, 0.09663027, 0.12822571]]
-    )
+    theta = (0, np.pi / 6, np.pi / 3)
+    sdist = slope_dist(theta, 20, "rms")
+    expected = np.array((sdist, sdist))
     np.testing.assert_array_almost_equal(actual, expected)
 
 
 def test_visible_slopes_high_emiss():
     """Test visible_slopes at high emission angle."""
     actual = visible_slopes(60, 0, 20, ntheta=3, naz=2)
-    expected = np.array([[0, 0.19326055, 0.51290283], [0, 0, 0]])
+    expected = np.array([[0, 0.1115790, 0.51290283], [0, 0, 0]])
     np.testing.assert_array_almost_equal(actual, expected)
