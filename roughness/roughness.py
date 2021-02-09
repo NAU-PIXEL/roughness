@@ -61,7 +61,7 @@ def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
     -------
     weights (2D array): Weighted probability table that sums to 1.
     """
-    tot = get_table_xarr([rms, inc], ["rms", "inc"], "total", los_lookup)
+    tot = get_table_xarr([rms, inc], ["rms", "inc"], None, "total", los_lookup)
     return tot / np.nansum(tot)
 
 
@@ -106,6 +106,8 @@ def get_table_xarr(params, dims=None, az=None, da="prob", los_lookup=FLOOKUP):
     -------
     table (xarray.DataArray): Table of los_lookup values
     """
+    if los_lookup is None:
+        los_lookup = FLOOKUP
     if isinstance(los_lookup, np.ndarray):
         los_lookup = rh.np2xr(los_lookup)
         print(type(los_lookup))

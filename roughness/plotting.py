@@ -11,7 +11,7 @@ CMAP_R = cm.get_cmap("magma_r").copy()
 CMAP_R.set_bad(color="gray")  # set nan color
 
 
-def plot_slope_az_table(table, cmap_r=False, clabel=None, ax=None):
+def plot_slope_az_table(table, cmap_r=False, clabel=None, ax=None, **kwargs):
     """
     Plot 2D (facet slope vs facet azimuth) lineofsight table.
 
@@ -31,6 +31,7 @@ def plot_slope_az_table(table, cmap_r=False, clabel=None, ax=None):
         aspect=90 / 360,
         cmap=CMAP_R if cmap_r else CMAP,
         interpolation="none",
+        **kwargs
     )
     ax.set_title("Facet Slope vs. Facet Azimuth")
     ax.set_xlabel("Facet slope angle [deg]")

@@ -35,10 +35,10 @@ def test_get_lookup_coords():
     np.testing.assert_almost_equal(theta, [0, 30, 60])
 
 
-def test_get_facet_grids():
-    """Test get_facet_grids"""
+def test_facet_grids():
+    """Test facet_grids"""
     table = np.ones((3, 2))
-    actual = rh.get_facet_grids(table)
+    actual = rh.facet_grids(table)
     expected = [
         np.array([[0, 45], [0, 45], [0, 45]]),
         np.array([[0, 0], [120, 120], [240, 240]]),
@@ -46,10 +46,10 @@ def test_get_facet_grids():
     np.testing.assert_almost_equal(actual, expected)
 
 
-def test_get_facet_grids_radians():
-    """Test get_facet_grids with radian units"""
+def test_facet_grids_radians():
+    """Test facet_grids with radian units"""
     table = np.ones((2, 2))
-    actual = rh.get_facet_grids(table, units="radians")
+    actual = rh.facet_grids(table, units="radians")
     expected = [
         np.array([[0, np.pi / 4], [0, np.pi / 4]]),
         np.array([[0, 0], [np.pi, np.pi]]),
