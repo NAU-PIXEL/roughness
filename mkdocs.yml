@@ -5,8 +5,8 @@ site_author: Christian Tai Udovicic
 site_description: Predict surface illumination accounting for roughness
 
 # Repository information
-repo_name: cjtu/roughness
-repo_url: https://github.com/cjtu/roughness
+repo_name: NAU-PIXEL/roughness
+repo_url: https://github.com/NAU-PIXEL/roughness
 edit_uri: ""
 
 # Copyright
@@ -26,8 +26,8 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/cjtu
-      name: cjtu on GitHub
+      link: https://github.com/nau-pixel
+      name: NAU-PIXEL on GitHub
 
 # Page tree
 nav:

@@ -3,7 +3,7 @@
 
 [![PyPI version](https://badge.fury.io/py/roughness.svg)](https://badge.fury.io/py/roughness)
 ![versions](https://img.shields.io/pypi/pyversions/roughness.svg)
-[![GitHub license](https://img.shields.io/github/license/mgancita/roughness.svg)](https://github.com/mgancita/roughness/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/NAU-PIXEL/roughness.svg)](https://github.com/NAU-PIXEL/roughness/blob/main/LICENSE)
 
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -13,7 +13,7 @@ Predict illumination of planetary surfaces accounting for roughness.
 
 
 - Free software: MIT
-- Documentation: https://cjtu.github.io/roughness.
+- Documentation: https://nau-pixel.github.io/roughness.
 
 
 ## Features
