@@ -49,14 +49,12 @@ def test_correct_shadow_table_no_roughness():
 
 def test_correct_shadow_table_low_roughness():
     """Test shadow probability with low roughness."""
-    rms = 10
-    pass  # Implement with new shadow lookup
+    # Implement with new shadow lookup
 
 
 def test_correct_shadow_table_high_roughness():
     """Test shadow probability with high roughness."""
-    rms = 40
-    pass  # Implement with new shadow lookup
+    # Implement with new shadow lookup
 
 
 def test_view_correction_zero_emiss():

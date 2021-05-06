@@ -326,7 +326,7 @@ def slope_dist(theta, theta0, dist="rms"):
         return np.zeros_like(theta)
 
     # Calculate Gaussian RMS slope distribution (Shepard 1995)
-    elif dist == "rms":
+    if dist == "rms":
         slopes = (tan(theta) / tan(theta0) ** 2) * exp(
             -tan(theta) ** 2 / (2 * tan(theta0) ** 2)
         )
