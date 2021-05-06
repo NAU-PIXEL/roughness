@@ -2,10 +2,10 @@
 
 [tool.poetry]
 name = "roughness"
-version = "0.2.0"
+version = "0.3.0-alpha.0"
 homepage = "https://github.com/NAU-PIXEL/roughness"
 description = "Predict illumination of planetary surfaces accounting for roughness."
-authors = ["Christian Tai Udovicic <cj.taiudovicic@gmail.com>"]
+authors = ["Christian J. Tai Udovicic <cj.taiudovicic@gmail.com>"]
 readme = "README.md"
 license =  "MIT"
 classifiers=[
@@ -16,7 +16,6 @@ classifiers=[
 ]
 include = [
     "LICENSE",
-    "roughness/py.typed"
 ]
 
 [tool.poetry.dependencies]
