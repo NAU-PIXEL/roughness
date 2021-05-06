@@ -40,6 +40,4 @@ jobs:
         run: poetry run pylint roughness/ tests/
       - name: Check format with black
         run: poetry run black --check roughness/ tests/
-      # - name: Check type hinting with mypy
-      #   run: poetry run mypy --strict --config-file=mypy.ini roughness/
       
