@@ -1,26 +1,85 @@
-# roughness
+<h1 align="center">Roughness</h1>
 
+<div align="center">
+  <strong>Illumination of rough planetary surfaces.</strong>
+</div>
 
-[![PyPI version](https://badge.fury.io/py/roughness.svg)](https://badge.fury.io/py/roughness)
-![versions](https://img.shields.io/pypi/pyversions/roughness.svg)
-[![GitHub license](https://img.shields.io/github/license/NAU-PIXEL/roughness.svg)](https://github.com/NAU-PIXEL/roughness/blob/main/LICENSE)
+<div align="center">
+  <!-- PYPI version -->
+  <a href="https://badge.fury.io/py/roughness">
+    <img src="https://badge.fury.io/py/roughness.svg"
+      alt="PYPI version" />
+  </a>
+ <!-- Test Coverage -->
+  <a href="https://codecov.io/github/choojs/choo">
+    <img src="https://img.shields.io/codecov/c/github/choojs/choo/master.svg?style=flat-square"
+      alt="Test Coverage" />
+  </a>
+  <!-- Code Style -->
+  <a href="https://github.com/psf/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg"
+      alt="Code Style: Black" />
+      </a>
+</div>
 
-
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
-
-Predict illumination of planetary surfaces accounting for roughness.
-
-
-- Free software: MIT
-- Documentation: https://nau-pixel.github.io/roughness.
-
+A python package for predicting the illumination and shadowing conditions on a rough planetary surface.
 
 ## Features
 
-* TODO
+- Generate rough surface slope distributions
+
+![Gaussian slope distribution](./docs/img/rms_slopes.png)
+
+- Adjust for viewing geometry
+
+![Viewing geometry corrected distribution](./docs/img/vis_slopes.png)
+
+- Predict the shadowed fraction of the surface given solar incidence, roughness, and viewing geometry
+
+![Shadow distribution](./docs/img/shadow_fraction.png)
+
+- See Jupyter notebook examples in `/roughness/examples` or on GitHub [here](https://github.com/NAU-PIXEL/roughness/tree/main/examples/)
+- Full documentation: https://nau-pixel.github.io/roughness
+
+## Download
+
+To clone and run the package, you'll need [Git](https://git-scm.com) and [Poetry](https://python-poetry.org/docs/) installed on your computer.
+
+```bash
+# Clone this repository
+$ git clone https://github.com/NAU-PIXEL/roughness.git
+
+# Enter the repository
+$ cd roughness
+
+# Install dependencies
+$ poetry install
+
+# Either open a Jupyter server
+$ poetry run jupyter notebook
+
+# Or activate the venv from your Python editor of choice
+# The venv is located at /home/username/roughness/.venv/bin/python
+```
+
+## Contribute
+
+This package is a work in progress. We appreciate any and all contributions in the form of bug reports & feature requests on our [issues](https://github.com/NAU-PIXEL/roughness/issues) page, or as pull requests (see [contributing guide](https://github.com/NAU-PIXEL/roughness/tree/main/CONTRIBUTING.md) for more details).
 
 ## Credits
 
+This package is adapted from code by the late Dr. J. L. Bandfield. You can read more about the first iterations of this code in [Bandfield et al. (2015)](https://doi.org/10.1016/j.icarus.2014.11.009) and [Bandfield et al. (2018)](https://doi.org/10.1038/s41561-018-0065-0).
 
 This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [`mgancita/cookiecutter-pypackage`](https://mgancita.github.io/cookiecutter-pypackage/) project template.
+
+## License
+
+[MIT](https://github.com/NAU-PIXEL/roughness/tree/main/LICENSE). Learn more [here](https://tldrlegal.com/license/mit-license).
+
+Copyright (c) 2021, Christian J. Tai Udovicic
+
+---
+
+> CV [cjtu.github.io](cjtu.github.io) &nbsp;&middot;&nbsp;
+> GitHub [@cjtu](https://github.com/cjtu) &nbsp;&middot;&nbsp;
+> Twitter [@TaiUdovicic](https://twitter.com/TaiUdovicic)
