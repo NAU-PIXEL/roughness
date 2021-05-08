@@ -6,14 +6,14 @@
 
 <div align="center">
   <!-- PYPI version -->
-  <a href="https://badge.fury.io/py/roughness">
+  <!-- <a href="https://badge.fury.io/py/roughness">
     <img src="https://badge.fury.io/py/roughness.svg"
       alt="PYPI version" />
-  </a>
+  </a> -->
  <!-- Test Coverage -->
-  <a href="https://codecov.io/github/choojs/choo">
+  <!-- <a href="https://codecov.io/github/choojs/choo">
     <img src="https://img.shields.io/codecov/c/github/choojs/choo/master.svg?style=flat-square"
-      alt="Test Coverage" />
+      alt="Test Coverage" /> -->
   </a>
   <!-- Code Style -->
   <a href="https://github.com/psf/black">
@@ -39,7 +39,7 @@ A python package for predicting the illumination and shadowing conditions on a r
 ![Shadow distribution](./docs/img/shadow_fraction.png)
 
 - See Jupyter notebook examples in `/roughness/examples` or on GitHub [here](https://github.com/NAU-PIXEL/roughness/tree/main/examples/)
-- Full documentation: https://nau-pixel.github.io/roughness
+- Full documentation: [https://nau-pixel.github.io/roughness]
 
 ## Download
 
@@ -80,6 +80,6 @@ Copyright (c) 2021, Christian J. Tai Udovicic
 
 ---
 
-> CV [cjtu.github.io](cjtu.github.io) &nbsp;&middot;&nbsp;
+> CV [cjtu.github.io](https://cjtu.github.io) &nbsp;&middot;&nbsp;
 > GitHub [@cjtu](https://github.com/cjtu) &nbsp;&middot;&nbsp;
 > Twitter [@TaiUdovicic](https://twitter.com/TaiUdovicic)
