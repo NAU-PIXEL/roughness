@@ -1,8 +1,10 @@
 """roughness namespace."""
+try:
+    from importlib_metadata import PackageNotFoundError, version
+except ImportError:
+    from importlib.metadata import PackageNotFoundError, version
 
-from importlib_metadata import PackageNotFoundError, version
-
-__author__ = "Christian Tai Udovicic"
+__author__ = "Christian J. Tai Udovicic"
 __email__ = "cj.taiudovicic@gmail.com"
 
 # Used to automatically set version number from github actions

@@ -231,7 +231,7 @@ def test_rotate_az_lookup():
 
 def test_project_info():
     """Test __author__ value."""
-    assert __author__ == "Christian Tai Udovicic"
+    assert __author__ == "Christian J. Tai Udovicic"
     assert __email__ == "cj.taiudovicic@gmail.com"
 
 
