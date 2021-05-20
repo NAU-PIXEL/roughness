@@ -43,3 +43,21 @@ If you are proposing a feature:
 * Keep the scope as narrow as possible, to make it easier to implement.
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
+
+## Contributing Code
+
+First, make sure you have a environment set up with `poetry` using the instructions in the [README](https://github.com/NAU-PIXEL/roughness).
+
+To check that your installation is working, you can run all of the tests from the main `roughness` directory with:
+
+`poetry run pytest`
+
+Roughness uses [black](https://black.readthedocs.io/en/stable/) to format python code. this can be done automatically by running:
+
+`poetry run black roughness/ tests/`
+
+Roughness also does style checking with pylint. You can run pylint with:
+  
+`poetry run pylint roughness/ tests/`
+
+All tests, black formatting and linting are checked automatically when you open a GitHub pull request. You will see if your PR whether or not these tests passed. It is good practice to run the above steps locally before every push to make sure everything looks good!
