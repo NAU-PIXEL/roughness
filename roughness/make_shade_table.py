@@ -134,9 +134,9 @@ for i in range(0, len(RMSmult)):
                         flush=True,
                     )
 
-np.save(r.ROUGHNESS_DIR+"/data/total_shadow_fraction.npy", tot_shade)
-np.save(r.ROUGHNESS_DIR+"/data/total_bin_population_4D.npy", bin_pop)
-np.save(r.ROUGHNESS_DIR+"/data/shade_bin_population_4D.npy", shade_pop)
-np.save(r.ROUGHNESS_DIR+"/data/shade_lookup_4D.npy", out)
+np.save(r.ROUGHNESS_DIR + "/data/total_shadow_fraction.npy", tot_shade)
+np.save(r.ROUGHNESS_DIR + "/data/total_bin_population_4D.npy", bin_pop)
+np.save(r.ROUGHNESS_DIR + "/data/shade_bin_population_4D.npy", shade_pop)
+np.save(r.ROUGHNESS_DIR + "/data/shade_lookup_4D.npy", out)
 
 print("--- %s seconds ---" % (time.time() - start_time))
