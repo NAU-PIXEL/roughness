@@ -3,7 +3,7 @@ This script mitigates a bug with the old shadow_lookup produced by J.B.
 Old table had null values of ray-casting set to 0 (e.g. fully illuminated).
 This causes very extreme slopes oriented away from sun to appear un-shadowed.
 Here, we set reset all 0 values in the table to the value at 0 degree facets
-New lookup is still bad... but less bad. 
+New lookup is still bad... but less bad.
 Replace this script and the old lookups with new ray-cast lookup when ready.
 """
 import os
@@ -25,6 +25,7 @@ for i, rms in enumerate(sl):
 np.save(os.path.join(DATA_DIR, "shade_lookup_4D.npy"), new_sl)
 
 # Plot comparison
+shadow_table = sl[-1, -1]
 fig = plt.figure(figsize=(9, 12))
 theta_surf, azimuth_surf = r.get_facet_grids(
     shadow_table

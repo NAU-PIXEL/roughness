@@ -124,19 +124,13 @@ def test_get_shadow_table():
 
 def test_load_shadow_lookup():
     """Test load_shadow_lookup"""
-    # Clear CACHE
-    r.CACHE = {}
-
     # Test load from disk
-    assert not r.CACHE
     lookup = r.load_shadow_lookup()
     assert lookup.shape == (11, 11, 37, 46)
 
-    # Test load from cache
-    assert r.SHADOW_LOOKUP in r.CACHE
+    # Test load from lru_cache
     lookup_cached = r.load_shadow_lookup()
     np.testing.assert_equal(lookup, lookup_cached)
-    assert r.SHADOW_LOOKUP in r.CACHE
 
 
 def test_get_lookup_coords():

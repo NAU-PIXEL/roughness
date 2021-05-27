@@ -9,7 +9,7 @@ You can contribute in many ways:
 
 ### Report Bugs
 
-Report bugs at https://github.com/nau-pixel/roughness/issues.
+Report bugs at the [issues board](https://github.com/nau-pixel/roughness/issues).
 
 If you are reporting a bug, please include:
 
@@ -35,7 +35,7 @@ articles, and such.
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at https://github.com/nau-pixel/roughness/issues.
+The best way to send feedback is to file an issue at [issues board](https://github.com/nau-pixel/roughness/issues).
 
 If you are proposing a feature:
 
@@ -44,20 +44,40 @@ If you are proposing a feature:
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
 
-## Contributing Code
+## Setting up a dev environment
 
-First, make sure you have a environment set up with `poetry` using the instructions in the [README](https://github.com/NAU-PIXEL/roughness).
+First, make sure you have cloned the repo using the instructions in the [README](https://github.com/NAU-PIXEL/roughness#installation) and have run:
 
-To check that your installation is working, you can run all of the tests from the main `roughness` directory with:
+`poetry install`
+
+Next, install [pre-commit](https://pre-commit.com/) with:
+
+`poetry run pre-commit install`
+
+Pre-commit will automatically format your code each time you `git commit` and make sure your style will pass checks before pushing to GitHub.
+
+**NOTE:** If the pre-commit checks fail, your changes will not be committed and you will have to `git add` and `git commit` again. To skip pre-commit (e.g. to snapshot a work in progress), use `git commit --no-verify`.
+
+Next, check that your development environment is working with:
 
 `poetry run pytest`
 
-Roughness uses [black](https://black.readthedocs.io/en/stable/) to format python code. this can be done automatically by running:
+All roughness code will be automatically formatted to the [black](https://black.readthedocs.io/en/stable/) standard upon commit. To run `black` manually:
 
 `poetry run black roughness/ tests/`
 
-Roughness also does style checking with pylint. You can run pylint with:
-  
+Roughness also checks style with [pylint](https://www.pylint.org/). You can run pylint with:
+
 `poetry run pylint roughness/ tests/`
 
-All tests, black formatting and linting are checked automatically when you open a GitHub pull request. You will see if your PR whether or not these tests passed. It is good practice to run the above steps locally before every push to make sure everything looks good!
+All tests, formatting and linting are checked when you open a GitHub pull request. Make sure to run the above steps before opening a pull request to make sure your contribution is in good shape!
+
+## Contributing examples and Jupyter
+
+Roughness uses [jupytext](https://jupytext.readthedocs.io/en/latest/index.html) to keep track of Jupyter notebooks in Git. Jupytext pairs `.ipynb` files with `.py` files, allowing us to collaborate on Jupyter notebooks via simpler python files. When you first checkout `roughness`, you will need to build Jupyter notebooks in the examples folder locally by running:
+
+`poetry run jupytext --sync examples/*`
+
+Once the notebooks are built, you can edit them in Jupyter as you would normally. Edited examples notebooks will automatically be converted back to their python versions when you make a new commit. The above `--sync` command can also be run at any time to manually sync notebook changes.
+
+**Note:**: All raw `.ipynb` must be converted with `jupytext` before being added to the repository.

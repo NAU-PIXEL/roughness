@@ -1,7 +1,7 @@
 """roughness namespace."""
 try:
     from importlib_metadata import PackageNotFoundError, version
-except ImportError:
+except ImportError:  # pragma: no cover
     from importlib.metadata import PackageNotFoundError, version
 
 __author__ = "Christian J. Tai Udovicic"

@@ -38,10 +38,10 @@ A python package for predicting the illumination and shadowing conditions on a r
 
 ![Shadow distribution](./docs/img/shadow_fraction.png)
 
-- See Jupyter notebook examples in `/roughness/examples` or on GitHub [here](https://github.com/NAU-PIXEL/roughness/tree/main/examples/)
-- Full documentation: [https://nau-pixel.github.io/roughness]
+- Full documentation: [nau-pixel.github.io/roughness](https://nau-pixel.github.io/roughness/)
+- Example notebooks coming soon!
 
-## Download
+## Installation
 
 To clone and run the package, you'll need [Git](https://git-scm.com) and [Poetry](https://python-poetry.org/docs/) installed on your computer.
 
