@@ -30,9 +30,8 @@ $P(\theta) = \frac{2sin \theta}{\pi tan^2 \bar{\theta} \ cos^2 \theta} \ exp(\fr
 
 ## Accounting for viewing angle
 
-The emission angle and azimuth the surface is viewed from will change the distribution of slopes observed. 
+The emission angle and azimuth the surface is viewed from will change the distribution of slopes observed.
 
 For example, when viewed from the North (azimuth=0$^o$) and an emission angle of 30$^o$, we expect to see more North facing slopes than South facing, with the difference being more pronounced at higher roughness values.
 
 ![visible slope distributions](img/vis_slopes.png)
-

@@ -1,11 +1,11 @@
 """Main module."""
 import os
+from functools import lru_cache
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shade_lookup_4D.npy")
-CACHE = {}  # Cache lookup table(s) to reduce file I/O
 
 
 def get_shadow_prob(
@@ -125,9 +125,10 @@ def get_shadow_table(rms_slope, sun_theta, sun_az, shadow_lookup):
     return shadow_table
 
 
+@lru_cache(maxsize=1)  # Cache 1 shadlow lookup table
 def load_shadow_lookup(path=SHADOW_LOOKUP):
     """
-    Return shadow lookup at path and add to cache if not loaded previously.
+    Return shadow lookup at path.
 
     Parameters
     ----------
@@ -137,9 +138,7 @@ def load_shadow_lookup(path=SHADOW_LOOKUP):
     -------
     shadow_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
     """
-    if path not in CACHE:
-        CACHE[path] = np.load(path, allow_pickle=True)
-    return CACHE[path]
+    return np.load(path, allow_pickle=True)
 
 
 def get_lookup_coords(shadow_lookup):
