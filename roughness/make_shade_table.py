@@ -4,7 +4,7 @@ import numpy as np
 import lineofsight as l
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(ROUGHNESS_DIR,"data")
+DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")
 ZSURF = os.path.join(ROUGHNESS_DIR, "data", "zsurf.npy")
 ZSURF_FACTORS = os.path.join(ROUGHNESS_DIR, "data", "zsurf_scale_factors.npy")
 CACHE = {}  # Cache lookup table(s) to reduce file I/O
@@ -47,7 +47,8 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return (x, y)
 
-def make_conj_sym(inarray,n,phase=0):
+
+def make_conj_sym(inarray, n, phase=0):
     """
     Takes square mag/phase arrays and impose conjugate symmetry for ifft.
 
@@ -76,19 +77,32 @@ def make_conj_sym(inarray,n,phase=0):
 
     # Perform the Hermitian transpose. If input is phase, transpose is negative.
     if phase == 0:
-        out[1:n, 1 : Ny] = np.rot90(out[1:n, Ny + 1 : n], 2)
-        out[DC, 1 : Ny] = np.rot90(out[DC, Ny + 1 : n].reshape(-1, 1), 2).reshape(-1)
-        out[Ny + 1 : n, DC] = np.rot90(out[1 : Ny, DC].reshape(-1, 1), 2).reshape(-1)
-        out[Ny + 1 : n, Ny] = np.rot90(out[1 : Ny, Ny].reshape(-1, 1), 2).reshape(-1)
+        out[1:n, 1:Ny] = np.rot90(out[1:n, Ny + 1 : n], 2)
+        out[DC, 1:Ny] = np.rot90(
+            out[DC, Ny + 1 : n].reshape(-1, 1), 2
+        ).reshape(-1)
+        out[Ny + 1 : n, DC] = np.rot90(
+            out[1:Ny, DC].reshape(-1, 1), 2
+        ).reshape(-1)
+        out[Ny + 1 : n, Ny] = np.rot90(
+            out[1:Ny, Ny].reshape(-1, 1), 2
+        ).reshape(-1)
 
     elif phase == 1:
-        out[1:n, 1 : Ny] = -np.rot90(out[1:n, Ny + 1 : n], 2)
-        out[DC, 1 : Ny] = -np.rot90(out[DC, Ny + 1 : n].reshape(-1, 1), 2).reshape(-1)
-        out[Ny + 1 : n, DC] = -np.rot90(out[1 : Ny, DC].reshape(-1, 1), 2).reshape(-1)
-        out[Ny + 1 : n, Ny] = -np.rot90(out[1 : Ny, Ny].reshape(-1, 1), 2).reshape(-1)
+        out[1:n, 1:Ny] = -np.rot90(out[1:n, Ny + 1 : n], 2)
+        out[DC, 1:Ny] = -np.rot90(
+            out[DC, Ny + 1 : n].reshape(-1, 1), 2
+        ).reshape(-1)
+        out[Ny + 1 : n, DC] = -np.rot90(
+            out[1:Ny, DC].reshape(-1, 1), 2
+        ).reshape(-1)
+        out[Ny + 1 : n, Ny] = -np.rot90(
+            out[1:Ny, Ny].reshape(-1, 1), 2
+        ).reshape(-1)
 
     # Return symmetric array.
     return out
+
 
 def make_zsurf(n=10000, H=0.8, qr=100):
     """
@@ -116,7 +130,10 @@ def make_zsurf(n=10000, H=0.8, qr=100):
     pixelwidth = 1 / n
 
     # Build the 1D wavevector, 1D FFT shift, unwrap to adjust for 2 pi phase.
-    q = (np.unwrap(np.fft.fftshift(((2 * np.pi / n) * np.arange(n)))) - 2 * np.pi) / pixelwidth
+    q = (
+        np.unwrap(np.fft.fftshift(((2 * np.pi / n) * np.arange(n))))
+        - 2 * np.pi
+    ) / pixelwidth
 
     # Create 2D mesh of the wavevector and convert to polar coordinates.
     qxx, qyy = np.meshgrid(q, q)
@@ -135,12 +152,12 @@ def make_zsurf(n=10000, H=0.8, qr=100):
 
     # This section imposes conjugate symmetry for  mag/phase input to ifft
     Bq = np.sqrt(Cq / (pixelwidth ** 2 / ((n * n) * ((2 * np.pi) ** 2))))
-    Bq = make_conj_sym(Bq,n)
+    Bq = make_conj_sym(Bq, n)
 
     # Here is where we introduce the randon gaussian portion.
     noise = np.random.rand(n, n)
     Phi = (2 * np.pi) * noise - np.pi
-    Phi = make_conj_sym(Phi,n,phase=1)
+    Phi = make_conj_sym(Phi, n, phase=1)
 
     # Now we convert back to cartesian coordinates.
     a, b = pol2cart(Bq, Phi)
@@ -171,6 +188,7 @@ def make_zsurf(n=10000, H=0.8, qr=100):
     # Save it!
     np.save(os.path.join(DATA_DIR, "zsurf.npy"), norm_zsurf)
 
+
 def load_zsurf(path=ZSURF):
     """
     Return zsurf at path and add to cache if not loaded previously.
@@ -184,12 +202,13 @@ def load_zsurf(path=ZSURF):
     zsurf (2D array): : Artifical z surface with self-affine roughness.
     """
     if not os.path.exists(ZSURF):
-        print('zsurf.npy not found. Making new surface.')
+        print("zsurf.npy not found. Making new surface.")
         make_zsurf()
 
     if path not in CACHE:
         CACHE[path] = np.load(path, allow_pickle=True)
     return CACHE[path]
+
 
 def get_slope(dem):
     """
@@ -219,6 +238,7 @@ def get_slope(dem):
     slope = np.rad2deg(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
 
     return slope.reshape(dims)
+
 
 def get_slope_aspect(dem):
     """
@@ -254,7 +274,7 @@ def get_slope_aspect(dem):
     # Convert the arctan output to azimuth in degrees relative to North.
 
     # If no slope we don't need aspect. Set to 0 because 360 is North.
-    aspect[slope ==0] = 0
+    aspect[slope == 0] = 0
 
     # Aspect is initially from -pi to pi clockwise about the x-axis.
     # We need to translate to clockwise about Y. To avoid dividing by 0
@@ -270,6 +290,7 @@ def get_slope_aspect(dem):
 
     return slope.reshape(dims), aspect.reshape(dims)
 
+
 def make_scale_factors():
     """
     Determine scale factors to impose a specific RMS slope to synthetic surface.
@@ -282,18 +303,19 @@ def make_scale_factors():
     zsurf = load_zsurf()
 
     # Create arrays for RMS coefficient/slope fitting.
-    coeff=np.arange(0,105,5,dtype='f8')
-    rawRMS=np.zeros_like(coeff)
+    coeff = np.arange(0, 105, 5, dtype="f8")
+    rawRMS = np.zeros_like(coeff)
 
     # Calculate RMS slope for all coeffcients.
     for index, value in enumerate(coeff):
-        rawRMS[index] = get_rms(get_slope(zsurf*value))
+        rawRMS[index] = get_rms(get_slope(zsurf * value))
 
     # Now fit the data with a high order polynomial.
-    RMSmult = np.polynomial.Polynomial.fit(rawRMS,coeff,9)
+    RMSmult = np.polynomial.Polynomial.fit(rawRMS, coeff, 9)
 
-    rough = np.arange(5,55,5)
+    rough = np.arange(5, 55, 5)
     np.save(os.path.join(DATA_DIR, "zsurf_scale_factors.npy"), RMSmult(rough))
+
 
 def load_zsurf_scale_factors(path=ZSURF_FACTORS):
     """
@@ -308,10 +330,11 @@ def load_zsurf_scale_factors(path=ZSURF_FACTORS):
     scale_factors (1D array): : Scale factors for zsurf.
     """
     if not os.path.exists(ZSURF_FACTORS):
-        print('zsurf_scale_factors.npy not found. Calculating new factors.')
+        print("zsurf_scale_factors.npy not found. Calculating new factors.")
         make_scale_factors()
 
     return np.load(path)
+
 
 def get_rms(y):
     """
@@ -327,7 +350,8 @@ def get_rms(y):
     """
     return np.sqrt(np.mean(y ** 2.0))
 
-def raytrace(dem,elev,azim):
+
+def raytrace(dem, elev, azim):
     """
     Wrapper for preparing input to the lineofsight raytrace module.
 
@@ -342,14 +366,15 @@ def raytrace(dem,elev,azim):
     out: A 2D array with size of DEM where values are 0 or 1 where 0 == shadowed
     """
     # Make an input array where all values are illuminated
-    los=np.ones_like(dem)
+    los = np.ones_like(dem)
     # If elev == 0 everything is illuminated. No point in calling function.
-    if (elev == 0):
-        los=los
+    if elev == 0:
+        los = los
     else:
-    # Passing the proper inputs to the fortran module.
-        los=l.lineofsight(dem.flatten(),elev,azim,los)
+        # Passing the proper inputs to the fortran module.
+        los = l.lineofsight(dem.flatten(), elev, azim, los)
     return los.T
+
 
 def get_shadowed_slope_aspect(slope, azim, shademap, naz=36, ntheta=45):
     """
@@ -369,41 +394,48 @@ def get_shadowed_slope_aspect(slope, azim, shademap, naz=36, ntheta=45):
     aspect (2D array): A two dimensional array of aspect data.
     """
     # Set up slope bin edges and steps.
-    theta_step=90//ntheta
-    theta_edge=np.arange(0,ntheta*theta_step,theta_step)
+    theta_step = 90 // ntheta
+    theta_edge = np.arange(0, ntheta * theta_step, theta_step)
 
     # Make out output arrays. We want nan for now.
-    out=np.full((naz,ntheta),np.nan)
-    bin_pop=np.copy(out)
-    shade_pop=np.copy(out)
+    out = np.full((naz, ntheta), np.nan)
+    bin_pop = np.copy(out)
+    shade_pop = np.copy(out)
 
     # Loop through slope bins.
-    for slope_index , bin_val in enumerate(theta_edge):
+    for slope_index, bin_val in enumerate(theta_edge):
         # Make a temporary azim array that we can mess with.
-        all_azim=azim[(slope>=bin_val) & (slope<bin_val+theta_step)].flatten()
+        all_azim = azim[
+            (slope >= bin_val) & (slope < bin_val + theta_step)
+        ].flatten()
 
         # If there are azimuths that meet the criteria, do some binning.
-        if len(all_azim)>0:
+        if len(all_azim) > 0:
             # Use histogram to make the azimuth bins for this slope bin.
-            azhist=np.histogram(all_azim,range=(0,360),bins=naz)[0]
+            azhist = np.histogram(all_azim, range=(0, 360), bins=naz)[0]
 
             # Write out the full azimuth bin population.
-            bin_pop[:,slope_index] = azhist
+            bin_pop[:, slope_index] = azhist
 
             # Find only shadowed facets in this slope bin.
-            shade_azim=azim[(slope>bin_val) & (slope<bin_val+theta_step) & (shademap==0)].flatten()
+            shade_azim = azim[
+                (slope > bin_val)
+                & (slope < bin_val + theta_step)
+                & (shademap == 0)
+            ].flatten()
             # Use histogram to make the azimuth bins for this slope bin.
-            shadehist=np.histogram(shade_azim,range=(0,360),bins=naz)[0]
+            shadehist = np.histogram(shade_azim, range=(0, 360), bins=naz)[0]
 
             # Write out the shaded azimuth bin population.
-            shade_pop[:,slope_index] = shadehist
+            shade_pop[:, slope_index] = shadehist
 
             # Write out the shadowed fraction.
-            out[:,slope_index] = shadehist/azhist
+            out[:, slope_index] = shadehist / azhist
 
     return bin_pop, shade_pop, out
 
-def make_shade_table(nrms=10,ninc=18,naz=36,ntheta=45):
+
+def make_shade_table(nrms=10, ninc=18, naz=36, ntheta=45):
     """
     Generate shadow lookup table for a synthetic Gaussian surface with varying
     RMS slope and sloar incidence. Fraction is binned by facet slope/azimuth.
@@ -424,63 +456,70 @@ def make_shade_table(nrms=10,ninc=18,naz=36,ntheta=45):
     shadow_fraction_4D.npy: Fraction of shadowed facets per slope/azim bin.
     """
     # Indicies for reporting progress
-    elems = nrms*ninc
+    elems = nrms * ninc
     itnum = 0
     # Load in the synthetic DEM and scale factors
-    zsurf=load_zsurf()
-    mult=load_zsurf_scale_factors()
+    zsurf = load_zsurf()
+    mult = load_zsurf_scale_factors()
 
     # Make our output arrays.
     # Number of facets per slope/azim bin
-    bin_pop=np.full((nrms,ninc,naz,ntheta),np.nan)
+    bin_pop = np.full((nrms, ninc, naz, ntheta), np.nan)
     # Number of shaded facets per slope/azim bin
-    shade_pop=np.copy(bin_pop)
+    shade_pop = np.copy(bin_pop)
     # shade_pop/bin_pop
-    shadow_frac=np.copy(bin_pop)
+    shadow_frac = np.copy(bin_pop)
 
     # Setup our incidence angle steps
-    inc_step=90//ninc
-    inc=np.arange(inc_step,90+inc_step,inc_step)
+    inc_step = 90 // ninc
+    inc = np.arange(inc_step, 90 + inc_step, inc_step)
 
     for rms_index, r in enumerate(mult):
         # Scale the dem to the prescirbed RMS slope.
-        dem=zsurf*r
+        dem = zsurf * r
 
-        for inc_index , i in enumerate(inc):
+        for inc_index, i in enumerate(inc):
             # Run the ray trace. Always from West for now.
-            tmpshade=raytrace(dem,i,270)
+            tmpshade = raytrace(dem, i, 270)
 
             # Find peak-to-peak of DEM
-            elev_span=np.ceil(np.ptp(dem))
+            elev_span = np.ceil(np.ptp(dem))
 
             # Calculate longest shadow for buffer.
-            qbuffer=int(elev_span*np.tan(np.deg2rad(i)))
+            qbuffer = int(elev_span * np.tan(np.deg2rad(i)))
 
             # Calculate slope/aspect then trim buffer length from west edge.
-            slope,azim=get_slope_aspect(dem)
-            slope=slope[:,qbuffer:-1]
-            azim=azim[:,qbuffer:-1]
+            slope, azim = get_slope_aspect(dem)
+            slope = slope[:, qbuffer:-1]
+            azim = azim[:, qbuffer:-1]
 
             # Trim buffer for shademap. Point here is that
             # the west edge beyond the DEM can't cast a
             # shadow onto this area so we remove it.
-            shademap=tmpshade[:,qbuffer:-1]
+            shademap = tmpshade[:, qbuffer:-1]
 
             # Determine the total shadowed fraction.
-            total_cells=shademap.shape[0]*shademap.shape[1]
-            illum_cells=np.sum(shademap.flatten())
-            shaded_cells=total_cells-illum_cells
+            total_cells = shademap.shape[0] * shademap.shape[1]
+            illum_cells = np.sum(shademap.flatten())
+            shaded_cells = total_cells - illum_cells
 
-            tot_shade=shaded_cells/total_cells
+            tot_shade = shaded_cells / total_cells
 
             # If there are shadows, continue with binning.
-            if tot_shade>0:
-                bin_pop[rms_index,inc_index,:,:], \
-                shade_pop[rms_index,inc_index,:,:], \
-                shadow_frac[rms_index,inc_index,:,:] = get_shadowed_slope_aspect(slope,azim,shademap)
+            if tot_shade > 0:
+                (
+                    bin_pop[rms_index, inc_index, :, :],
+                    shade_pop[rms_index, inc_index, :, :],
+                    shadow_frac[rms_index, inc_index, :, :],
+                ) = get_shadowed_slope_aspect(slope, azim, shademap)
 
                 itnum = itnum + 1
-                print(round((itnum / elems) * 100, 2),"%...........",end="\r",flush=True,)
+                print(
+                    round((itnum / elems) * 100, 2),
+                    "%...........",
+                    end="\r",
+                    flush=True,
+                )
 
     np.save(os.path.join(DATA_DIR, "total_bin_population_4D.npy"), bin_pop)
     np.save(os.path.join(DATA_DIR, "shade_bin_population_4D.npy"), shade_pop)
