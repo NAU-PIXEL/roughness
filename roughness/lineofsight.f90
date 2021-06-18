@@ -1,4 +1,5 @@
 SUBROUTINE inputvector(elev,azim,inputV)
+  !** This subroutine converts elev and azim to a 3D vector.
   IMPLICIT NONE
   REAL(8), intent(in) :: elev, azim
   REAL(8), intent(inout), dimension(0:2) :: inputV
@@ -15,6 +16,7 @@ SUBROUTINE inputvector(elev,azim,inputV)
 END SUBROUTINE inputvector
 
 SUBROUTINE inv_norm_vector(inputV,inv_inputV,norm_inputV)
+  !** This subroutine computes the normalized inverse of the input vector
   IMPLICIT NONE
   REAL(8), intent(in), dimension(0:2) :: inputV
   REAL(8), intent(inout), dimension(0:2) :: inv_inputV, norm_inputV
