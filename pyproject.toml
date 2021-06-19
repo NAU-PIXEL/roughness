@@ -40,7 +40,7 @@ line-length=79
 output-format="colorized"
 reports="y"
 include-ids="yes"
-disable=["R0913","C0103"]
+disable=["R0913", "C0103", "E0401", "I1101"]
 msg-template="{msg_id}:{line:3d},{column}: {obj}: {msg}"
 
 [tool.pytest.ini_options]

@@ -37,6 +37,7 @@ repos:
         - -d R0913
         - -d C0103
         - -d E0401
+        - -d I1101
       always_run: false  # suppress error if run on no files
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1

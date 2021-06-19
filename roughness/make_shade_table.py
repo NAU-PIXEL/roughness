@@ -1,7 +1,13 @@
 """Module containing all functions for generating a shadow lookup table. """
 import os
 import numpy as np
-import lineofsight as l
+from roughness import helpers as rh
+
+try:
+    import lineofsight as l
+except ModuleNotFoundError as e:
+    rh.compile_lineofsight()
+    import lineofsight as l
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")
@@ -137,7 +143,7 @@ def make_zsurf(n=10000, H=0.8, qr=100):
 
     # Create 2D mesh of the wavevector and convert to polar coordinates.
     qxx, qyy = np.meshgrid(q, q)
-    rho, phi = cart2pol(qxx, qyy)
+    rho, _ = cart2pol(qxx, qyy)
 
     # Make a 2D PSD zeros matrix and fill it with the polar rho values
     # from the 2D wavevectors. First line account for the rolloff by making it
@@ -369,7 +375,7 @@ def raytrace(dem, elev, azim):
     los = np.ones_like(dem)
     # If elev == 0 everything is illuminated. No point in calling function.
     if elev == 0:
-        los = los
+        pass
     else:
         # Passing the proper inputs to the fortran module.
         los = l.lineofsight(dem.flatten(), elev, azim, los)
