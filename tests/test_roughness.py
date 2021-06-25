@@ -11,7 +11,7 @@ def test_get_shadow_prob_nadir():
     sun_theta, sun_az = (0, 270)  # solar inclination angle
     sc_theta, sc_az = (0, 270)  # spacecraft emisssion angle
     actual = r.get_shadow_prob(rms, sun_theta, sun_az, sc_theta, sc_az)
-    expected = np.zeros(actual.shape)
+    expected = np.full(actual.shape, np.nan)
     np.testing.assert_equal(actual, expected)
 
 
