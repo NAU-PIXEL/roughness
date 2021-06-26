@@ -1,151 +1,113 @@
 """Main module."""
-import os
 from functools import lru_cache
+import importlib.resources as pkg_resources
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
 
-ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shadow_fraction_4D.npy")
+with pkg_resources.path("data", "los_lookup.npy") as p:
+    LOS_LOOKUP = p.as_posix()
 
 
-def get_shadow_prob(
-    rms, sun_theta, sun_az, sc_theta, sc_az, shadow_lookup=SHADOW_LOOKUP
-):
+def get_shadow_table(rms, sun_theta, sun_az, los_lookup=LOS_LOOKUP):
     """
-    Return shadow probability of each facet, given input viewing geometry and
-    rms roughness.
+    Return probability that each facet is in shadow given (sun_that, sun_az)
+    on a surface with rms roughness.
 
     Parameters
     ----------
     rms_slope (num): Root-mean-square slope of roughness [deg]
-    sun_theta (num or array): Solar inclination angle(s) [deg]
-    sun_az (num or array): Solar azimuth(s) [deg]
-    sc_theta (num or array): Spacecraft emission angle(s) [deg]
-    sc_az (num or array): Spacecraft azimuth(s) [deg]
-    shadow_lookup (optional: str or 4D array): Path to file or shadow lookup
+    sun_theta (num or array): Solar inclination angle [deg]
+    sun_az (num or array): Solar azimuth [deg]
+    los_lookup (str or 4D array): Path to file or los lookup array
 
     Returns
     -------
     shadow_prob (2D array): Shadow probability table (dims: az, theta)
     """
-    if isinstance(shadow_lookup, str):
-        shadow_lookup = load_shadow_lookup(shadow_lookup)
-    elif (
-        not isinstance(shadow_lookup, np.ndarray)
-        or len(shadow_lookup.shape) != 4
-    ):
-        raise ValueError("Invalid shadow_lookup.")
-    shadow_table = get_shadow_table(rms, sun_theta, sun_az, shadow_lookup)
-    shadow_prob = correct_shadow_table(rms, sc_theta, sc_az, shadow_table)
-    return shadow_prob
-
-
-def correct_shadow_table(rms_slope, sc_theta, sc_az, shadow_table):
-    """
-    Return shadow table corrected for roughness and viewing geometry.
-
-    Parameters
-    ----------
-    rms_slope (num): Root-mean-square slope of roughness [deg]
-    sc_theta (num or array): Spacecraft emission angle(s) [deg]
-    sc_az (num or array): Spacecraft azimuth(s) [deg]
-    shadow_table (array): Shadow fraction table (dims: az, theta)
-
-    Returns
-    -------
-    shadow_prob (array): Shadow probability table (dims: az, theta)
-    """
-    # Get P(theta|rms): rough surface probability distribution
-    facet_theta, facet_az = get_facet_grids(shadow_table, "radians")
-    slope_prob = slope_dist(facet_theta, np.radians(rms_slope))
-
-    # Get P(visible|spacecraft): probability of observing facets from sc vector
-    facet_cartesian = sph2cart(facet_theta, facet_az)
-    sc_cartesian = sph2cart(np.radians(sc_theta), np.radians(sc_az))
-    visible_prob = view_correction(facet_cartesian, sc_cartesian)
-
-    # Correct shadow table by P(theta|rms), P(visible|spacecraft)
-    shadow_prob = shadow_table * slope_prob * visible_prob
-    return shadow_prob
-
-
-def view_correction(facet_cartesian, sc_cartesian):
-    """
-    Return the fraction of surface facets (theta_grid, az_grid) visible from
-    the viewing direction (sc_theta, sc_az). Visible faction is 1 - projection
-    of the surface facets onto a plane orthogonal to the viewing vector.
-
-    Facets oriented > 90 degrees away from the viewing direction are set to 0.
-
-    Parameters
-    ----------
-    facet_cartesian (MxNx3 array): Grid of facet vectors in cartesian coords.
-    sc_cartesian (len 3 arrary): Spacecraft view vector in cartesian coords.
-
-    Returns
-    -------
-    visible (MxN array): Probability that facets are visible from spacecraft.
-    """
-    projection = proj_orthogonal(facet_cartesian, sc_cartesian)
-
-    # Invert projection (facets pointed toward sc have smallest proj)
-    visible = 1 - np.linalg.norm(projection, axis=2)
-
-    # Zero out any facets oriented away from the sc direction (angle > 90)
-    cos_angle = np.dot(facet_cartesian, sc_cartesian)
-    visible[cos_angle < 0] = 0
-
-    return visible
-
-
-def get_shadow_table(rms_slope, sun_theta, sun_az, shadow_lookup):
-    """
-    Return shadow fraction of surface facets interpolated from shadow lookup.
-
-    Parameters
-    ----------
-    rms_slope (num): Root-mean-square slope of roughness [deg]
-    sun_theta (num or array): Solar inclination angle(s) [deg]
-    sun_az (num or array): Solar azimuth(s) [deg]
-    shadow_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
-
-    Returns
-    -------
-    shadow_table (2D array): Shadow fraction table (dims: az, theta)
-    """
-    # cinc = 1 - cos(np.radians(sun_theta))
-
-    # Interpolate nearest values in lookup to (rms_slope, cinc)
-    rms_slopes, incs, azs, _ = get_lookup_coords(shadow_lookup)
-    rms_table = interp_lookup(rms_slope, rms_slopes, shadow_lookup)
-    inc_table = interp_lookup(sun_theta, incs, rms_table)
-
-    # Rotate table from az=270 to sun_az
-    shadow_table = rotate_az_lookup(inc_table, sun_az, azs)
+    if isinstance(los_lookup, str):
+        los_lookup = load_los_lookup(los_lookup)
+    # Invert to get P(shadowed) since los_lookup defaults to P(illuminated)
+    shadow_table = 1 - get_los_table(rms, sun_theta, sun_az, los_lookup)
     return shadow_table
 
 
-@lru_cache(maxsize=1)  # Cache 1 shadlow lookup table
-def load_shadow_lookup(path=SHADOW_LOOKUP):
+def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
     """
-    Return shadow lookup at path.
+    Return probability that each facet is observed from (sc_theta, sc_az)
+    on a surface with rms roughness.
 
     Parameters
     ----------
-    path (optional: str): Path to shadow lookup file containing 4D numpy array
+    rms_slope (num): Root-mean-square slope of roughness [deg]
+    sc_theta (num or array): Spacecraft emission angle [deg]
+    sc_az (num or array): Spacecraft azimuth [deg]
+    los_lookup (str or 4D array): Path to file or los lookup array
 
     Returns
     -------
-    shadow_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
+    view_prob (2D array): View probability table (dims: az, theta)
+    """
+    if isinstance(los_lookup, str):
+        los_lookup = load_los_lookup(los_lookup)
+    view_table = get_los_table(rms, sc_theta, sc_az, los_lookup)
+
+    # Normalize to get overall probability of each facet being observed
+    view_table /= np.sum(view_table)
+    return view_table
+
+
+def get_los_table(rms, theta, az, los_lookup):
+    """
+    Return 2D line of sight probability table of rms rough surface facets in
+    the line of sight of (theta, az).
+
+    Output los_table is interpolated from ray-casting derived los_lookup.
+    See make_los_table.py to produce a compatible los_lookup file.
+
+    Parameters
+    ----------
+    rms (num): Root-mean-square surface theta describing roughness [deg]
+    theta (num or array): Inclination angle [deg]
+    az (num or array): Azimuth [deg]
+    los_lookup (4D array): Los lookup (dims: rms, cinc, az, theta)
+
+    Returns
+    -------
+    los_table (2D array): Line of sight probability table (dims: az, theta)
+    """
+    cinc = 1 - cos(np.radians(theta))
+
+    # Interpolate nearest values in lookup to (rms, cinc)
+    rms_slopes, cincs, azs, _ = get_lookup_coords(los_lookup)
+    rms_table = interp_lookup(rms, rms_slopes, los_lookup)
+    cinc_table = interp_lookup(cinc, cincs, rms_table)
+
+    # Rotate table from az=270 to az
+    los_table = rotate_az_lookup(cinc_table, az, azs)
+    return los_table
+
+
+@lru_cache(maxsize=1)  # Cache 1 los_lookup
+def load_los_lookup(path=LOS_LOOKUP):
+    """
+    Return line of sight lookup at path.
+
+    Parameters
+    ----------
+    path (optional: str): Path to los lookup file containing 4D numpy array
+
+    Returns
+    -------
+    los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
     """
     return np.load(path, allow_pickle=True)
 
 
-def get_lookup_coords(shadow_lookup):
+def get_lookup_coords(los_lookup):
     """
-    Return coordinate arrays corresponding to each dimension of shadow lookup.
+    Return coordinate arrays corresponding to each dimension of loslos lookup.
 
-    Assumes shadow_lookup axes are in the following order with ranges:
+    Assumes los_lookup axes are in the following order with ranges:
         rms: [0, 50] degrees
         cinc: [0, 1]
         az: [0, 360] degrees
@@ -153,13 +115,13 @@ def get_lookup_coords(shadow_lookup):
 
     Parameters
     ----------
-    shadow_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
+    los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
 
     Return
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    nrms, ninc, naz, ntheta = shadow_lookup.shape
+    nrms, ninc, naz, ntheta = los_lookup.shape
     rms_coords = np.linspace(0, 50, nrms)
     inc_coords = np.linspace(0, 90, ninc)  # (0, 90) degrees
     az_coords = np.linspace(0, 360, naz)
@@ -168,24 +130,24 @@ def get_lookup_coords(shadow_lookup):
     return (rms_coords, inc_coords, az_coords, theta_coords)
 
 
-def get_facet_grids(shadow_table, units="degrees"):
+def get_facet_grids(los_table, units="degrees"):
     """
-    Return 2D grids of surface facet slope and azimuth angles of shadow_table.
+    Return 2D grids of surface facet slope and azimuth angles of los_table.
 
-    Assumes shadow_table axes are (az, theta) with ranges:
+    Assumes los_table axes are (az, theta) with ranges:
         az: [0, 360] degrees
         theta: [0, 90] degrees
 
     Parameters
     ----------
-    shadow_table (array): Shadow fraction table (dims: az, theta)
+    los_table (array): Line of sight table (dims: az, theta)
     units (str): Return grids in specified units ('degrees' or 'radians')
 
     Return
     ------
     thetas, azs (tuple of 2D array): Coordinate grids of facet slope and az
     """
-    naz, ntheta = shadow_table.shape
+    naz, ntheta = los_table.shape
     az_arr = np.linspace(0, 360, naz)
     theta_arr = np.linspace(0, 90, ntheta)
     if units == "radians":
@@ -228,51 +190,27 @@ def interp_lookup(xvalue, xcoords, values):
     return interp_values
 
 
-def rotate_az_lookup(shadow_table, sun_az, azcoords, az0=270):
+def rotate_az_lookup(los_table, target_az, azcoords, az0=270):
     """
-    Return shadow_table rotated from az0 to nearest sun_az in azcoords.
+    Return los_table rotated from az0 to nearest target_az in azcoords.
 
-    Since shadow_lookup derived at one solar az (default az0=270), we rotate
-    shadow_table to get shadows with respect to sun_az.
+    Given az0 must match solar az used to produce los_lookup (default az0=270).
 
     Parameters
     ----------
-    shadow_table (array): Shadow fraction table (dims: az, theta)
-    sun_az (num): Solar azimuth (target azimuth for rotation)
-    azcoords (array): Coordinate array of azimuths in shadow_table
-    az0 (optional: num): Solar azimuth used to derive shadow lookup
+    los_table (array): Line of sight probability table (dims: az, theta)
+    target_az (num): Target azimuth [deg]
+    azcoords (array): Coordinate array of azimuths in los_table [deg]
+    az0 (optional: num): Solar azimuth used to derive loslos lookup [deg]
 
     Returns
     -------
-    rotated_shadow_table (array): Shadow fraction table rotated on az axis
+    rotated_los_table (array): los_table rotated on az axis (dims: az, theta)
     """
     ind0 = np.argmin(np.abs(azcoords - az0))
-    ind = np.argmin(np.abs(azcoords - sun_az))
+    ind = np.argmin(np.abs(azcoords - target_az))
     az_shift = ind0 - ind
-    return np.concatenate((shadow_table[az_shift:], shadow_table[:az_shift]))
-
-
-def proj_orthogonal(a, b):
-    """
-    Return projection of vector(s) a onto plane orthogonal to vector b.
-
-    Vectors a and b must be in Cartesian coordinates. Vector a may be a 1D
-    array of shape (3,) or a 3D array of shape (NxMx3). Vector b must be a 1D
-    array of shape (3,).
-
-    Parameters
-    ----------
-    a (len 3 vec or MxNx3 array): Vector(s) to project.
-    b (len 3 vec): Orthogonal vector defining the plane to project a onto
-
-    Returns
-    -------
-    proj_a_onto_norm_plane (array): Projection of a onto plane orthogonal to b
-    """
-    bnorm = np.sqrt(sum(b ** 2))
-    proj_a_onto_b = (np.dot(a, b[:, None]) / bnorm ** 2) * b
-    proj_a_onto_norm_plane = a - proj_a_onto_b
-    return proj_a_onto_norm_plane
+    return np.concatenate((los_table[az_shift:], los_table[:az_shift]))
 
 
 def sph2cart(theta, phi, radius=1):

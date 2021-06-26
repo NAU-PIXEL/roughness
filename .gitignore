@@ -135,5 +135,5 @@ dmypy.json
 # Adding in .hdf
 *.hdf
 
-# Misc
+# Local testing
 /tmp

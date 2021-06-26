@@ -12,9 +12,9 @@
 # ---
 
 # %% [markdown]
-# # Generate visible slope distribution from shadow lookup table
+# # Generate visible slope distribution from los lookup table
 #
-# Using a ray-casting shadow lookup table, return a table of probabilities that a given surface facet (az, slope) is in shadow. The probabilities are interpolated from the lookup table which includes ray-casting runs from a variety of synthetic Gaussian surfaces with varying RMS slopes and local solar incidence angles.
+# Using a ray-casting line of sight lookup table, return a table of probabilities that a given surface facet (az, slope) is in shadow. The probabilities are interpolated from the lookup table which includes ray-casting runs from a variety of synthetic Gaussian surfaces with varying RMS slopes and local solar incidence angles.
 #
 # The inputs to the function are:
 #
@@ -23,9 +23,9 @@
 # - `sun_az`: To-sun azimuth angle w.r.t. the surface
 # - `sc_theta`: To-spacecraft exitance angle w.r.t. the surface
 # - `sc_az`: To-spacecraft azimuth angle w.r.t. the surface
-# - (optional) `shadow_lookup_path`: Path to custom 4D shadow lookup file
+# - (optional) `los_lookup_path`: Path to custom 4D los lookup file
 #
-# The default lookup table `shade_lookup_4D.npy` predicts shadowing across:
+# The default lookup table `los_lookup_4D.npy` predicts shadowing across:
 #
 # - RMS slopes from 0 to 50 degrees (in 5 degree increments)
 # - cos(solar incidence angle) from 0 to 1 (in 0.1 increments)
