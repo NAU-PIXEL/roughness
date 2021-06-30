@@ -1,7 +1,8 @@
 """Module containing all functions for generating a shadow lookup table. """
 import os
+from functools import lru_cache
 import numpy as np
-from roughness import helpers as rh
+import helpers as rh
 
 try:
     import lineofsight as l
@@ -11,9 +12,13 @@ except ModuleNotFoundError as e:
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")
-ZSURF = os.path.join(ROUGHNESS_DIR, "data", "zsurf.npy")
-ZSURF_FACTORS = os.path.join(ROUGHNESS_DIR, "data", "zsurf_scale_factors.npy")
-CACHE = {}  # Cache lookup table(s) to reduce file I/O
+
+# Define output files
+FZSURF = os.path.join(DATA_DIR, "zsurf.npy")
+FZSURF_FACTORS = os.path.join(DATA_DIR, "zsurf_scale_factors.npy")
+FTOTAL_BINS = os.path.join(DATA_DIR, "total_bin_population_4D.npy")
+FSHADE_BINS = os.path.join(DATA_DIR, "shade_bin_population_4D.npy")
+FSHADE_FRAC = os.path.join(DATA_DIR, "shadow_fraction_4D.npy")
 
 
 def cart2pol(x, y):
@@ -110,7 +115,7 @@ def make_conj_sym(inarray, n, phase=0):
     return out
 
 
-def make_zsurf(n=10000, H=0.8, qr=100):
+def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
     """
     Return a synthetic surface with self-affine roughness.
     Much of this is detailed in this paper:
@@ -122,10 +127,11 @@ def make_zsurf(n=10000, H=0.8, qr=100):
     n: Size in the square array.
     H: Hurst exponent.
     qr: Rolloff wavelength in units of q (wavevector; 1/m).
+    fout (str): Path to write z surface.
 
     Returns
     -------
-    z(height) (size x size, arr): Artifical z surface with self-affine roughness.
+    zsurf (n x n arr): Artifical z surface with self-affine roughness.
     """
     # Make sure the dimensions are even.
     if n % 2:
@@ -192,12 +198,14 @@ def make_zsurf(n=10000, H=0.8, qr=100):
 
     # Voila. A real array of height values with self-affine roughness.
     # Save it!
-    np.save(os.path.join(DATA_DIR, "zsurf.npy"), norm_zsurf)
+    np.save(fout, norm_zsurf)
+    return norm_zsurf
 
 
-def load_zsurf(path=ZSURF):
+@lru_cache(1)
+def load_zsurf(path=FZSURF):
     """
-    Return zsurf at path and add to cache if not loaded previously.
+    Return z surface with self-affine roughness at path.
 
     Parameters
     ----------
@@ -205,15 +213,14 @@ def load_zsurf(path=ZSURF):
 
     Returns
     -------
-    zsurf (2D array): : Artifical z surface with self-affine roughness.
+    zsurf (2D array): Artifical z surface with self-affine roughness.
     """
-    if not os.path.exists(ZSURF):
-        print("zsurf.npy not found. Making new surface.")
-        make_zsurf()
-
-    if path not in CACHE:
-        CACHE[path] = np.load(path, allow_pickle=True)
-    return CACHE[path]
+    try:
+        zsurf = np.load(path, allow_pickle=True)
+    except FileNotFoundError:
+        print(f"{path} not found. Making new z surface...")
+        zsurf = make_zsurf(fout=path)
+    return zsurf
 
 
 def get_slope(dem):
@@ -265,39 +272,22 @@ def get_slope_aspect(dem):
     """
     # We use the gradient function to return the dz_dx and dz_dy.
     dz_dy, dz_dx = np.gradient(dem)
-    # Flatten the arrays to make them easily iterable for the aspect crap.
-    # First I am storing the original dimensions so I can reshape upon return.
-    dims = dem.shape
-    dz_dy = dz_dy.flatten()
-    dz_dx = dz_dx.flatten()
 
     # Slope is returned in degrees through simple calculation.
     # No windowing is done (e.g. Horn's method).
     slope = np.rad2deg(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
-    # Preallocate an array for the aspect.
-    aspect = np.rad2deg(np.arctan(dz_dy / dz_dx))
+    aspect = np.rad2deg(np.arctan2(-dz_dy, dz_dx))
 
-    # Convert the arctan output to azimuth in degrees relative to North.
+    # Convert to clockwise about Y and restrict to (0, 360) from North
+    aspect = (270 + aspect) % 360
 
-    # If no slope we don't need aspect. Set to 0 because 360 is North.
+    # TODO: do we need this line?
+    # If no slope we don't need aspect
     aspect[slope == 0] = 0
-
-    # Aspect is initially from -pi to pi clockwise about the x-axis.
-    # We need to translate to clockwise about Y. To avoid dividing by 0
-    # we're just going to explicitly set these to North or South based on
-    # the sign of dz_dy.
-    aspect[(dz_dx == 0) & (dz_dy < 0)] = 180
-    aspect[(dz_dx == 0) & (dz_dy > 0)] = 360
-
-    # Here we make our offsets to account for counterclockwise about
-    # y-axis and 0-360.
-    aspect[dz_dx > 0] = 270 - aspect[dz_dx > 0]
-    aspect[dz_dx <= 0] = 90 - aspect[dz_dx <= 0]
-
-    return slope.reshape(dims), aspect.reshape(dims)
+    return slope, aspect
 
 
-def make_scale_factors():
+def make_scale_factors(fout=FZSURF_FACTORS):
     """
     Determine scale factors to impose a specific RMS slope to synthetic surface.
 
@@ -317,13 +307,16 @@ def make_scale_factors():
         rawRMS[index] = get_rms(get_slope(zsurf * value))
 
     # Now fit the data with a high order polynomial.
-    RMSmult = np.polynomial.Polynomial.fit(rawRMS, coeff, 9)
+    rms_mult = np.polynomial.Polynomial.fit(rawRMS, coeff, 9)
 
-    rough = np.arange(5, 55, 5)
-    np.save(os.path.join(DATA_DIR, "zsurf_scale_factors.npy"), RMSmult(rough))
+    rough = np.linspace(0, 50, 5, endpoint=False)
+    scale_factors = rms_mult(rough)
+    np.save(fout, scale_factors)
+    return scale_factors
 
 
-def load_zsurf_scale_factors(path=ZSURF_FACTORS):
+@lru_cache(1)
+def load_zsurf_scale_factors(path=FZSURF_FACTORS):
     """
     Return scale factors at path.
 
@@ -335,11 +328,12 @@ def load_zsurf_scale_factors(path=ZSURF_FACTORS):
     -------
     scale_factors (1D array): : Scale factors for zsurf.
     """
-    if not os.path.exists(ZSURF_FACTORS):
-        print("zsurf_scale_factors.npy not found. Calculating new factors.")
-        make_scale_factors()
-
-    return np.load(path)
+    try:
+        zsurf_factors = np.load(path)
+    except FileNotFoundError:
+        print(f"{path} not found. Calculating new factors...")
+        zsurf_factors = make_scale_factors(fout=path)
+    return zsurf_factors
 
 
 def get_rms(y):
@@ -374,9 +368,7 @@ def raytrace(dem, elev, azim):
     # Make an input array where all values are illuminated
     los = np.ones_like(dem)
     # If elev == 0 everything is illuminated. No point in calling function.
-    if elev == 0:
-        pass
-    else:
+    if elev != 0:
         # Passing the proper inputs to the fortran module.
         los = l.lineofsight(dem.flatten(), elev, azim, los)
     return los.T
@@ -400,48 +392,47 @@ def get_shadowed_slope_aspect(slope, azim, shademap, naz=36, ntheta=45):
     aspect (2D array): A two dimensional array of aspect data.
     """
     # Set up slope bin edges and steps.
-    theta_step = 90 // ntheta
-    theta_edge = np.arange(0, ntheta * theta_step, theta_step)
+    slope_bins = np.linspace(0, 90, ntheta + 1)
 
     # Make out output arrays. We want nan for now.
-    out = np.full((naz, ntheta), np.nan)
-    bin_pop = np.copy(out)
-    shade_pop = np.copy(out)
+    shade_frac = np.full((naz, ntheta), np.nan)
+    bin_total = np.full((naz, ntheta), np.nan)
+    shade_count = np.full((naz, ntheta), np.nan)
 
     # Loop through slope bins.
-    for slope_index, bin_val in enumerate(theta_edge):
+    for i in range(len(slope_bins) - 1):
+        # Indices where slope in current bin
+        in_bin = (slope >= slope_bins[i]) & (slope < slope_bins[i + 1])
+
         # Make a temporary azim array that we can mess with.
-        all_azim = azim[
-            (slope >= bin_val) & (slope < bin_val + theta_step)
-        ].flatten()
+        all_azim = azim[in_bin].flatten()
 
         # If there are azimuths that meet the criteria, do some binning.
         if len(all_azim) > 0:
-            # Use histogram to make the azimuth bins for this slope bin.
-            azhist = np.histogram(all_azim, range=(0, 360), bins=naz)[0]
+            # Get total binned azimuth counts
+            azhist, _ = np.histogram(all_azim, range=(0, 360), bins=naz)
 
-            # Write out the full azimuth bin population.
-            bin_pop[:, slope_index] = azhist
+            # Get binned shadowed facet counts
+            shade_azim = azim[in_bin & (shademap == 0)].flatten()
+            shadehist, _ = np.histogram(shade_azim, range=(0, 360), bins=naz)
 
-            # Find only shadowed facets in this slope bin.
-            shade_azim = azim[
-                (slope > bin_val)
-                & (slope < bin_val + theta_step)
-                & (shademap == 0)
-            ].flatten()
-            # Use histogram to make the azimuth bins for this slope bin.
-            shadehist = np.histogram(shade_azim, range=(0, 360), bins=naz)[0]
+            # Save total & shadowed bins and shade_frac
+            bin_total[:, i] = azhist
+            shade_count[:, i] = shadehist
+            shade_frac[:, i] = shadehist / azhist
 
-            # Write out the shaded azimuth bin population.
-            shade_pop[:, slope_index] = shadehist
-
-            # Write out the shadowed fraction.
-            out[:, slope_index] = shadehist / azhist
-
-    return bin_pop, shade_pop, out
+    return bin_total, shade_count, shade_frac
 
 
-def make_shade_table(nrms=10, ninc=18, naz=36, ntheta=45):
+def make_shade_table(
+    nrms=10,
+    ncinc=10,
+    naz=36,
+    ntheta=45,
+    ftotal=FTOTAL_BINS,
+    fshade=FSHADE_BINS,
+    fshade_frac=FSHADE_FRAC,
+):
     """
     Generate shadow lookup table for a synthetic Gaussian surface with varying
     RMS slope and sloar incidence. Fraction is binned by facet slope/azimuth.
@@ -462,7 +453,7 @@ def make_shade_table(nrms=10, ninc=18, naz=36, ntheta=45):
     shadow_fraction_4D.npy: Fraction of shadowed facets per slope/azim bin.
     """
     # Indicies for reporting progress
-    elems = nrms * ninc
+    elems = nrms * ncinc
     itnum = 0
     # Load in the synthetic DEM and scale factors
     zsurf = load_zsurf()
@@ -470,46 +461,49 @@ def make_shade_table(nrms=10, ninc=18, naz=36, ntheta=45):
 
     # Make our output arrays.
     # Number of facets per slope/azim bin
-    bin_pop = np.full((nrms, ninc, naz, ntheta), np.nan)
+    bin_pop = np.full((nrms, ncinc, naz, ntheta), np.nan)
     # Number of shaded facets per slope/azim bin
     shade_pop = np.copy(bin_pop)
     # shade_pop/bin_pop
     shadow_frac = np.copy(bin_pop)
 
     # Setup our incidence angle steps
-    inc_step = 90 // ninc
-    inc = np.arange(inc_step, 90 + inc_step, inc_step)
+    cinc = np.linspace(0, 1, ncinc, endpoint=False)
+    inc = np.rad2deg(np.arccos(cinc))
 
     for rms_index, r in enumerate(mult):
         # Scale the dem to the prescirbed RMS slope.
         dem = zsurf * r
 
         for inc_index, i in enumerate(inc):
-            # Run the ray trace. Always from West for now.
-            tmpshade = raytrace(dem, i, 270)
+            if (r <= 0) or (i == 0):
+                tot_shade = 0
+            else:
+                # Run the ray trace. Always from West for now.
+                tmpshade = raytrace(dem, i, 270)
 
-            # Find peak-to-peak of DEM
-            elev_span = np.ceil(np.ptp(dem))
+                # Find peak-to-peak of DEM
+                elev_span = np.ceil(np.ptp(dem))
 
-            # Calculate longest shadow for buffer.
-            qbuffer = int(elev_span * np.tan(np.deg2rad(i)))
+                # Calculate longest shadow for buffer.
+                qbuffer = int(elev_span * np.tan(np.deg2rad(i)))
 
-            # Calculate slope/aspect then trim buffer length from west edge.
-            slope, azim = get_slope_aspect(dem)
-            slope = slope[:, qbuffer:-1]
-            azim = azim[:, qbuffer:-1]
+                # Calculate slope/aspect then trim buffer length from west edge.
+                slope, azim = get_slope_aspect(dem)
+                slope = slope[:, qbuffer:-1]
+                azim = azim[:, qbuffer:-1]
 
-            # Trim buffer for shademap. Point here is that
-            # the west edge beyond the DEM can't cast a
-            # shadow onto this area so we remove it.
-            shademap = tmpshade[:, qbuffer:-1]
+                # Trim buffer for shademap. Point here is that
+                # the west edge beyond the DEM can't cast a
+                # shadow onto this area so we remove it.
+                shademap = tmpshade[:, qbuffer:-1]
 
-            # Determine the total shadowed fraction.
-            total_cells = shademap.shape[0] * shademap.shape[1]
-            illum_cells = np.sum(shademap.flatten())
-            shaded_cells = total_cells - illum_cells
+                # Determine the total shadowed fraction.
+                total_cells = shademap.shape[0] * shademap.shape[1]
+                illum_cells = np.sum(shademap)
+                shaded_cells = total_cells - illum_cells
 
-            tot_shade = shaded_cells / total_cells
+                tot_shade = shaded_cells / total_cells
 
             # If there are shadows, continue with binning.
             if tot_shade > 0:
@@ -526,7 +520,16 @@ def make_shade_table(nrms=10, ninc=18, naz=36, ntheta=45):
                     end="\r",
                     flush=True,
                 )
+            else:
+                bin_pop[rms_index, inc_index, :, :] = 0
+                shade_pop[rms_index, inc_index, :, :] = 0
+                shadow_frac[rms_index, inc_index, :, :] = 0
 
-    np.save(os.path.join(DATA_DIR, "total_bin_population_4D.npy"), bin_pop)
-    np.save(os.path.join(DATA_DIR, "shade_bin_population_4D.npy"), shade_pop)
-    np.save(os.path.join(DATA_DIR, "shadow_fraction_4D.npy"), shadow_frac)
+    np.save(ftotal, bin_pop)
+    np.save(fshade, shade_pop)
+    np.save(fshade_frac, shadow_frac)
+    return bin_pop, shade_pop, shadow_frac
+
+
+if __name__ == "__main__":
+    _ = make_shade_table()
