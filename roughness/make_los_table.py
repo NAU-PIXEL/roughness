@@ -1,8 +1,10 @@
-"""Module containing all functions for generating a shadow lookup table. """
+"""Generate line of sight lookup tables."""
 import os
 from functools import lru_cache
 import numpy as np
 import helpers as rh
+
+# from roughness import helpers as rh
 
 try:
     import lineofsight as l
@@ -16,9 +18,9 @@ DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")
 # Define output files
 FZSURF = os.path.join(DATA_DIR, "zsurf.npy")
 FZSURF_FACTORS = os.path.join(DATA_DIR, "zsurf_scale_factors.npy")
-FTOTAL_BINS = os.path.join(DATA_DIR, "total_bin_population_4D.npy")
-FSHADE_BINS = os.path.join(DATA_DIR, "shade_bin_population_4D.npy")
-FSHADE_FRAC = os.path.join(DATA_DIR, "shadow_fraction_4D.npy")
+FTOT_FACETS = os.path.join(DATA_DIR, "total_facets_4D.npy")
+FLOS_FACETS = os.path.join(DATA_DIR, "los_facets_4D.npy")
+FLOS_PROB = os.path.join(DATA_DIR, "los_prob_4D.npy")
 
 
 def cart2pol(x, y):
@@ -133,7 +135,14 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
     -------
     zsurf (n x n arr): Artifical z surface with self-affine roughness.
     """
-    # Make sure the dimensions are even.
+    # Try to load zsurf
+    zsurf = load_zsurf(fout)
+    if zsurf is not None and zsurf.shape == (n, n):
+        print(f"Loaded zsurf from {fout}")
+        return zsurf
+
+    # Make sure the dimensions are even
+    print(f"Making new z surface...")
     if n % 2:
         n = n - 1
 
@@ -218,8 +227,7 @@ def load_zsurf(path=FZSURF):
     try:
         zsurf = np.load(path, allow_pickle=True)
     except FileNotFoundError:
-        print(f"{path} not found. Making new z surface...")
-        zsurf = make_zsurf(fout=path)
+        zsurf = None
     return zsurf
 
 
@@ -287,7 +295,9 @@ def get_slope_aspect(dem):
     return slope, aspect
 
 
-def make_scale_factors(fout=FZSURF_FACTORS):
+def make_scale_factors(
+    zsurf, rms_min=0, rms_max=50, nrms=10, write=True, fout=FZSURF_FACTORS
+):
     """
     Determine scale factors to impose a specific RMS slope to synthetic surface.
 
@@ -295,23 +305,27 @@ def make_scale_factors(fout=FZSURF_FACTORS):
     -------
     10 element vector of multiplicative coefficients from 5-50 degrees RMS slope
     """
-    # Load the synthetic surface array from the numpy data type.
-    zsurf = load_zsurf()
+    rms_arr = np.linspace(rms_min, rms_max, nrms + 1)
+    # Try to load scale factors and check they are correct length
+    scale_factors = load_zsurf_scale_factors(fout)
+    if scale_factors is not None and len(scale_factors) == len(rms_arr):
+        print(f"Loaded scale_factors from {fout}")
+        return scale_factors
 
-    # Create arrays for RMS coefficient/slope fitting.
-    coeff = np.arange(0, 105, 5, dtype="f8")
-    rawRMS = np.zeros_like(coeff)
+    # Compute slope at range of factors, fit and infer slope at rms_arr
+    print(f"Calculating new scale factors...")
+    factors = np.arange(0, 105, 5, dtype="f8")  # TODO remove hardcoded values
+    rms_derived = np.zeros_like(factors)
 
-    # Calculate RMS slope for all coeffcients.
-    for index, value in enumerate(coeff):
-        rawRMS[index] = get_rms(get_slope(zsurf * value))
+    # Calculate RMS slope for all factors
+    for i, factor in enumerate(factors):
+        rms_derived[i] = get_rms(get_slope(zsurf * factor))
 
-    # Now fit the data with a high order polynomial.
-    rms_mult = np.polynomial.Polynomial.fit(rawRMS, coeff, 9)
-
-    rough = np.linspace(0, 50, 5, endpoint=False)
-    scale_factors = rms_mult(rough)
-    np.save(fout, scale_factors)
+    # Fit with high order polynomial, infer factors at rms_arr
+    rms_mult = np.polynomial.Polynomial.fit(rms_derived, factors, 9)
+    scale_factors = rms_mult(rms_arr)
+    if write:
+        np.save(fout, scale_factors)
     return scale_factors
 
 
@@ -331,8 +345,7 @@ def load_zsurf_scale_factors(path=FZSURF_FACTORS):
     try:
         zsurf_factors = np.load(path)
     except FileNotFoundError:
-        print(f"{path} not found. Calculating new factors...")
-        zsurf_factors = make_scale_factors(fout=path)
+        zsurf_factors = None
     return zsurf_factors
 
 
@@ -351,92 +364,138 @@ def get_rms(y):
     return np.sqrt(np.mean(y ** 2.0))
 
 
-def raytrace(dem, elev, azim):
+def raytrace(dem, inc, azim):
     """
-    Wrapper for preparing input to the lineofsight raytrace module.
+    Return line of sight boolean array of 2D dem viewed from (inc, azim).
+
+    Wraps lineofsight raytrace module.
 
     Parameters
     ----------
-    dem: Input DEM to ray trace. 2D array where values are z-height.
-    elev: Input vector elevation 0 is directly overhead.
-    azim: Input vector azimuthal direction.
+    dem (2D arr): Input DEM to ray trace where values are z-height.
+    inc (1D arr): Input vector incidence angle (0 is nadir).
+    azim (1D arr): Input vector azimuth angle (0 is North).
 
     Returns
     -------
-    out: A 2D array with size of DEM where values are 0 or 1 where 0 == shadowed
+    out (2D bool arr, dem.shape): True - in los; False - not in los
     """
     # Make an input array where all values are illuminated
     los = np.ones_like(dem)
-    # If elev == 0 everything is illuminated. No point in calling function.
-    if elev != 0:
+    # If inc == 0 everything is illuminated. No point in calling function.
+    if inc != 0:
         # Passing the proper inputs to the fortran module.
-        los = l.lineofsight(dem.flatten(), elev, azim, los)
-    return los.T
+        los = l.lineofsight(dem.flatten(), inc, azim, los)
+    return los.T.astype(bool)
 
 
-def get_shadowed_slope_aspect(slope, azim, shademap, naz=36, ntheta=45):
+def bin_slope_azim(slope, azim, slope_bins, azim_bins):
     """
-    Determine the shadowed percentage of facets for defined slope/aspect bins.
+    Return count of facets in each slope, azim bin.
 
     Parameters
     ----------
-    slope: Two dimensional array of slope data.
-    azim: Two dimensional array of aspect data.
-    shademap: The two dimensional output of raytrace.
-    naz (int): Number of azimuth bins. Default=36
-    ntheta (int): Number of slope bins. Default=45
+    slope (1D arr): Facet slope values (e.g. flattened from get_slope_aspect)
+    azim (1D arr): Facet azim values (e.g. flattened from get_slope_aspect)
+    slope_bins (1D arr): Bin edges of slopes.
+    azim_bins (1D arr): Bin edges of azims.
 
-    Returns
-    -------
-    slope (2D array): A two dimensional array of slope data.
-    aspect (2D array): A two dimensional array of aspect data.
+    Return
+    ------
+    counts (2D arr nslope, naz): Counts in each slope/az bin; shape defined by bins.
     """
-    # Set up slope bin edges and steps.
-    slope_bins = np.linspace(0, 90, ntheta + 1)
-
-    # Make out output arrays. We want nan for now.
-    shade_frac = np.full((naz, ntheta), np.nan)
-    bin_total = np.full((naz, ntheta), np.nan)
-    shade_count = np.full((naz, ntheta), np.nan)
-
-    # Loop through slope bins.
-    for i in range(len(slope_bins) - 1):
-        # Indices where slope in current bin
-        in_bin = (slope >= slope_bins[i]) & (slope < slope_bins[i + 1])
-
-        # Make a temporary azim array that we can mess with.
-        all_azim = azim[in_bin].flatten()
-
-        # If there are azimuths that meet the criteria, do some binning.
-        if len(all_azim) > 0:
-            # Get total binned azimuth counts
-            azhist, _ = np.histogram(all_azim, range=(0, 360), bins=naz)
-
-            # Get binned shadowed facet counts
-            shade_azim = azim[in_bin & (shademap == 0)].flatten()
-            shadehist, _ = np.histogram(shade_azim, range=(0, 360), bins=naz)
-
-            # Save total & shadowed bins and shade_frac
-            bin_total[:, i] = azhist
-            shade_count[:, i] = shadehist
-            shade_frac[:, i] = shadehist / azhist
-
-    return bin_total, shade_count, shade_frac
+    hist = np.histogram2d(slope, azim, bins=(slope_bins, azim_bins))
+    counts = hist[0].T  # Hist 2D transposes output
+    return counts
 
 
-def make_shade_table(
+def get_dem_los_buffer(dem, inc):
+    """
+    Return buffer index beyond which it is impossible to have shadows.
+
+    Since dem is of finite size and illuminated from the West at some inc, some
+    facets towards the left edge of dem cannot have shadows cast onto them. We
+    compute the max possible shadow length and exclude pixels within that
+    length from the western edge of dem.
+    """
+    # Find peak-to-peak of DEM
+    elev_span = np.ceil(np.ptp(dem))
+
+    # Calculate longest shadow for buffer.
+    buffer = int(elev_span * np.tan(np.deg2rad(inc)))
+    return buffer
+
+
+# def get_los_slope_aspect(slope, azim, losmap, tot_count, naz=36, ntheta=45, threshold=50):
+#     """
+#     Determine the los percentage of facets for defined slope/aspect bins.
+
+#     Parameters
+#     ----------
+#     slope: Two dimensional array of slope data.
+#     azim: Two dimensional array of aspect data.
+#     losmap: The two dimensional output of raytrace.
+#     naz (int): Number of azimuth bins. Default=36
+#     ntheta (int): Number of slope bins. Default=45
+#     threshold (int): Minimum number of valid facets to do binning (else nan)
+
+#     Returns
+#     -------
+#     slope (2D array): A two dimensional array of slope data.
+#     aspect (2D array): A two dimensional array of aspect data.
+#     """
+#     # Set up slope bin edges and steps.
+#     slope_bins = np.linspace(0, 90, ntheta + 1)
+
+#     # Make out output arrays. We want nan for now.
+#     los_prob = np.full((naz, ntheta), np.nan)
+#     los_count = np.full((naz, ntheta), np.nan)
+
+#     # Loop through slope bins.
+#     for i in range(len(slope_bins) - 1):
+#         # Indices where slope in current bin
+#         in_bin = (slope >= slope_bins[i]) & (slope < slope_bins[i + 1])
+
+#         # Get azimuths in this slope bin
+#         azim_in_bin = azim[in_bin].flatten()
+
+#         # If there are azimuths that meet the criteria, do some binning.
+#         if len(azim_in_bin) > threshold:
+#             # Get total binned azimuth counts
+#             azhist, _ = np.histogram(azim_in_bin, range=(0, 360), bins=naz)
+
+#             # Get binned facets in line of sight
+#             los_azim = azim[in_bin & (losmap == 1)].flatten()
+#             loshist, _ = np.histogram(los_azim, range=(0, 360), bins=naz)
+
+#             # Save los bins and los_prob
+#             los_count[:, i] = loshist
+#             los_prob[:, i] = loshist / tot_count
+
+#     return tot_count, los_count, los_prob
+
+
+def make_los_table(
     nrms=10,
     ncinc=10,
     naz=36,
     ntheta=45,
-    ftotal=FTOTAL_BINS,
-    fshade=FSHADE_BINS,
-    fshade_frac=FSHADE_FRAC,
+    threshold=50,
+    ftot_facets=FTOT_FACETS,
+    flos_facets=FLOS_FACETS,
+    flos_prob=FLOS_PROB,
+    write=True,
 ):
     """
-    Generate shadow lookup table for a synthetic Gaussian surface with varying
-    RMS slope and sloar incidence. Fraction is binned by facet slope/azimuth.
-    Number of incidence angles and slope/azimuth bins can be adjusted.
+    Generate line of sight probability table with dims (rms, inc, slope, az).
+
+    Tables are generated using raytracing on a synthetic Gaussian surface with
+    a range of RMS slopes and observed from a range of solar inc angles. Final
+    los_prob table is binned by facet slope/azimuth:
+
+    - los_prob == 1: All facets in line of sight (i.e. visible / illuminated)
+    - los_prob == 0: No facets in line of sight (i.e. not visible / shadowed)
+    - los_prob == np.nan: Fewer than threshold facets observed in bin
 
     Parameters
     ----------
@@ -444,92 +503,85 @@ def make_shade_table(
     ninc: Number of incidence Angles. Default=18
     naz: Number of azimuth bins. Default=36
     ntheta: Number of slope bins. Default=45
+    threshold (int): Minimum number of valid facets to do binning, else nan
 
     Returns
     -------
     No values are returned. Three tables are saved in roughness data directory.
-    total_bin_population_4D.npy: Number of facets in slope/azim bin.
-    shade_bin_population_4D.npy: Number of shadowed facets in slope/azim bin.
-    shadow_fraction_4D.npy: Fraction of shadowed facets per slope/azim bin.
+    total_facets_4D.npy: Number of facets in slope/azim bin.
+    los_facets_4D.npy: Number of facets in line of sight in slope/azim bin.
+    los_prob_4D.npy: Probability of facets in line of sight per slope/azim bin.
     """
     # Indicies for reporting progress
-    elems = nrms * ncinc
-    itnum = 0
+    niter = nrms * ncinc
+
     # Load in the synthetic DEM and scale factors
-    zsurf = load_zsurf()
-    mult = load_zsurf_scale_factors()
+    zsurf = make_zsurf()
+    factors = make_scale_factors(zsurf, nrms=nrms)
 
-    # Make our output arrays.
-    # Number of facets per slope/azim bin
-    bin_pop = np.full((nrms, ncinc, naz, ntheta), np.nan)
-    # Number of shaded facets per slope/azim bin
-    shade_pop = np.copy(bin_pop)
-    # shade_pop/bin_pop
-    shadow_frac = np.copy(bin_pop)
+    # Init total and line of sight facet arrays binned by slope/azim
+    tot_facets = np.full((nrms, ncinc, naz, ntheta), np.nan)
+    los_facets = np.copy(tot_facets)
 
-    # Setup our incidence angle steps
-    cinc = np.linspace(0, 1, ncinc, endpoint=False)
-    inc = np.rad2deg(np.arccos(cinc))
+    # Setup our rms, inc and slope / azim bin arrays
+    # TODO: remove hardcoded values
+    rms_arr = np.linspace(0, 50, nrms)
+    cincs = np.linspace(1, 0, ncinc, endpoint=False)  # (0, 90) degrees
+    slopes = np.linspace(0, 90, ntheta + 1)
+    azims = np.linspace(0, 360, naz + 1)
+    incs = np.rad2deg(np.arccos(cincs))
 
-    for rms_index, r in enumerate(mult):
-        # Scale the dem to the prescirbed RMS slope.
-        dem = zsurf * r
+    for r, rms in enumerate(rms_arr):
+        # Flat surface => all facets in line of sight at any inc
+        if rms == 0:
+            # Cludge: at rms=0 most facets are undefined, but we expect all to
+            # be visible. Set to 1 to ensure los_prob == 1
+            tot_facets[r, :, :, :] = 1
+            los_facets[r, :, :, :] = 1
+            continue
 
-        for inc_index, i in enumerate(inc):
-            if (r <= 0) or (i == 0):
-                tot_shade = 0
-            else:
-                # Run the ray trace. Always from West for now.
-                tmpshade = raytrace(dem, i, 270)
+        # Scale the dem to the prescirbed RMS slope and get slope, azim arrays
+        dem = zsurf * factors[r]
+        slope, azim = get_slope_aspect(dem)
 
-                # Find peak-to-peak of DEM
-                elev_span = np.ceil(np.ptp(dem))
+        # Get binned counts of total facets in dem (doesn't change with inc)
+        tot_facets[r, :, :, :] = bin_slope_azim(
+            slope.flatten(), azim.flatten(), slopes, azims
+        )
+        for i, inc in enumerate(incs):
+            print(f"{(r*ncinc+i)/niter:.2%}...........", end="\r", flush=True)
+            # Nadir view => all facets in line of sight
+            if inc == 0:
+                los_facets[r, i, :, :] = tot_facets[r, i, :, :]
+                continue
 
-                # Calculate longest shadow for buffer.
-                qbuffer = int(elev_span * np.tan(np.deg2rad(i)))
+            # Run ray trace (always from West for now) and get azims in los
+            los = raytrace(dem, inc, 270)
 
-                # Calculate slope/aspect then trim buffer length from west edge.
-                slope, azim = get_slope_aspect(dem)
-                slope = slope[:, qbuffer:-1]
-                azim = azim[:, qbuffer:-1]
+            # Get buffer beyond which raytrace breaks down due to finite dem
+            buf = get_dem_los_buffer(dem, inc)
 
-                # Trim buffer for shademap. Point here is that
-                # the west edge beyond the DEM can't cast a
-                # shadow onto this area so we remove it.
-                shademap = tmpshade[:, qbuffer:-1]
+            # Subset slope and azim by buffer and keep only those in los
+            los_buf = los[:, buf:]
+            azim_los_buf = azim[:, buf:][los_buf]
+            slope_los_buf = slope[:, buf:][los_buf]
 
-                # Determine the total shadowed fraction.
-                total_cells = shademap.shape[0] * shademap.shape[1]
-                illum_cells = np.sum(shademap)
-                shaded_cells = total_cells - illum_cells
+            # Get binned counts of facets in los (exclude those west of buffer)
+            los_facets[r, i, :, :] = bin_slope_azim(
+                slope_los_buf.flatten(), azim_los_buf.flatten(), slopes, azims
+            )
 
-                tot_shade = shaded_cells / total_cells
-
-            # If there are shadows, continue with binning.
-            if tot_shade > 0:
-                (
-                    bin_pop[rms_index, inc_index, :, :],
-                    shade_pop[rms_index, inc_index, :, :],
-                    shadow_frac[rms_index, inc_index, :, :],
-                ) = get_shadowed_slope_aspect(slope, azim, shademap)
-
-                itnum = itnum + 1
-                print(
-                    round((itnum / elems) * 100, 2),
-                    "%...........",
-                    end="\r",
-                    flush=True,
-                )
-            else:
-                bin_pop[rms_index, inc_index, :, :] = 0
-                shade_pop[rms_index, inc_index, :, :] = 0
-                shadow_frac[rms_index, inc_index, :, :] = 0
-
-    np.save(ftotal, bin_pop)
-    np.save(fshade, shade_pop)
-    np.save(fshade_frac, shadow_frac)
-    return bin_pop, shade_pop, shadow_frac
+    # Get facet probabilities (fraction of facets in lineofsight / total)
+    with np.errstate(divide="ignore"):
+        los_prob = los_facets / tot_facets
+    los_prob[tot_facets < threshold] = np.nan
+    if write:
+        np.save(ftot_facets, tot_facets)
+        np.save(flos_facets, los_facets)
+        np.save(flos_prob, los_prob)
+        print("Wrote ", "\n".join([ftot_facets, flos_facets, flos_prob]))
+    return tot_facets, los_facets, los_prob
 
 
 if __name__ == "__main__":
-    _ = make_shade_table()
+    _ = make_los_table()

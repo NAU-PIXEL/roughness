@@ -5,7 +5,7 @@ import numpy as np
 from numpy import sin, cos, tan, exp, pi
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shade_lookup_4D.npy")
+SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shadow_fraction_4D.npy")
 
 
 def get_shadow_prob(
@@ -161,7 +161,7 @@ def get_lookup_coords(shadow_lookup):
     """
     nrms, ncinc, naz, ntheta = shadow_lookup.shape
     rms_coords = np.linspace(0, 50, nrms)
-    ncinc_coords = np.linspace(0, 1, ncinc)
+    ncinc_coords = np.linspace(1, 0, ncinc)  # (0, 90) degrees
     az_coords = np.linspace(0, 360, naz)
     theta_coords = np.linspace(0, 90, ntheta)
 
