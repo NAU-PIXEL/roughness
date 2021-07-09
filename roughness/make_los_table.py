@@ -231,52 +231,24 @@ def load_zsurf(path=FZSURF):
     return zsurf
 
 
-def get_slope(dem):
+def get_slope_aspect(dem, get_aspect=True):
     """
-    Return the instantaneous slopefor a dem using NumPy's gradient method.
-    Slope and aspect are determined using methods described in this paper:
-      Ritter, Paul. "A vector-based slope and aspect generation algorithm."
-      Photogrammetric Engineering and Remote Sensing 53, no. 8 (1987): 1109-1111
+    Return the instantaneous slope and aspect (if get_aspect) for dem.
+
+    Both values derived using NumPy's gradient method by methods from:
+
+    Ritter, Paul. "A vector-based slope and aspect generation algorithm."
+    Photogrammetric Engineering and Remote Sensing 53, no. 8 (1987): 1109-1111
 
     Parameters
     ----------
     dem(height) (2D array): A two dimensional array of elevation data.
+    get_aspect (bool): Whether to also compute and return aspect (default True)
 
     Returns
     -------
     slope (2D array): A two dimensional array of slope data.
-    """
-    # We use the gradient function to return the dz_dx and dz_dy.
-    dz_dy, dz_dx = np.gradient(dem)
-    # Flatten the arrays to make them easily iterable for the aspect crap.
-    # First I am storing the original dimensions so I can reshape upon return.
-    dims = dem.shape
-    dz_dy = dz_dy.flatten()
-    dz_dx = dz_dx.flatten()
-
-    # Slope is returned in degrees through simple calculation.
-    # No windowing is done (e.g. Horn's method).
-    slope = np.rad2deg(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
-
-    return slope.reshape(dims)
-
-
-def get_slope_aspect(dem):
-    """
-    Return the instantaneous slope and aspect for a dem. Both values is derived
-    using NumPy's gradient method.
-    Slope and aspect are determined using methods described in this paper:
-      Ritter, Paul. "A vector-based slope and aspect generation algorithm."
-      Photogrammetric Engineering and Remote Sensing 53, no. 8 (1987): 1109-1111
-
-    Parameters
-    ----------
-    dem(height) (2D array): A two dimensional array of elevation data.
-
-    Returns
-    -------
-    slope (2D array): A two dimensional array of slope data.
-    aspect (2D array): A two dimensional array of aspect data.
+    aspect (2D array, optional): A two dimensional array of aspect data.
     """
     # We use the gradient function to return the dz_dx and dz_dy.
     dz_dy, dz_dx = np.gradient(dem)
@@ -284,15 +256,16 @@ def get_slope_aspect(dem):
     # Slope is returned in degrees through simple calculation.
     # No windowing is done (e.g. Horn's method).
     slope = np.rad2deg(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
-    aspect = np.rad2deg(np.arctan2(-dz_dy, dz_dx))
+    if get_aspect:
+        aspect = np.rad2deg(np.arctan2(-dz_dy, dz_dx))
+        # Convert to clockwise about Y and restrict to (0, 360) from North
+        aspect = (270 + aspect) % 360
 
-    # Convert to clockwise about Y and restrict to (0, 360) from North
-    aspect = (270 + aspect) % 360
-
-    # TODO: do we need this line?
-    # If no slope we don't need aspect
-    aspect[slope == 0] = 0
-    return slope, aspect
+        # TODO: do we need this line?
+        # If no slope we don't need aspect
+        aspect[slope == 0] = 0
+        return slope, aspect
+    return slope
 
 
 def make_scale_factors(
@@ -319,7 +292,9 @@ def make_scale_factors(
 
     # Calculate RMS slope for all factors
     for i, factor in enumerate(factors):
-        rms_derived[i] = get_rms(get_slope(zsurf * factor))
+        rms_derived[i] = get_rms(
+            get_slope_aspect(zsurf * factor, get_aspect=False)
+        )
 
     # Fit with high order polynomial, infer factors at rms_arr
     rms_mult = np.polynomial.Polynomial.fit(rms_derived, factors, 9)
@@ -391,7 +366,7 @@ def raytrace(dem, inc, azim):
 
 def bin_slope_azim(slope, azim, slope_bins, azim_bins):
     """
-    Return count of facets in each slope, azim bin.
+    Return count of facets in each slope, azim bin using 2d histogram.
 
     Parameters
     ----------
@@ -411,68 +386,32 @@ def bin_slope_azim(slope, azim, slope_bins, azim_bins):
 
 def get_dem_los_buffer(dem, inc):
     """
-    Return buffer index beyond which it is impossible to have shadows.
+    Return in_buffer, sections of dem too close to the edge to have shadows.
 
     Since dem is of finite size and illuminated from the West at some inc, some
     facets towards the left edge of dem cannot have shadows cast onto them. We
     compute the max possible shadow length and exclude pixels within that
     length from the western edge of dem.
+
+    Parameters
+    ----------
+    dem (2D arr): Input DEM to ray trace where values are z-height.
+    inc (1D arr): Input vector incidence angle (0 is nadir).
+
+    Return
+    ------
+    in_buffer (2D arr): Bool array of whether dem is in buffer
     """
     # Find peak-to-peak of DEM
     elev_span = np.ceil(np.ptp(dem))
 
     # Calculate longest shadow for buffer.
     buffer = int(elev_span * np.tan(np.deg2rad(inc)))
-    return buffer
 
-
-# def get_los_slope_aspect(slope, azim, losmap, tot_count, naz=36, ntheta=45, threshold=50):
-#     """
-#     Determine the los percentage of facets for defined slope/aspect bins.
-
-#     Parameters
-#     ----------
-#     slope: Two dimensional array of slope data.
-#     azim: Two dimensional array of aspect data.
-#     losmap: The two dimensional output of raytrace.
-#     naz (int): Number of azimuth bins. Default=36
-#     ntheta (int): Number of slope bins. Default=45
-#     threshold (int): Minimum number of valid facets to do binning (else nan)
-
-#     Returns
-#     -------
-#     slope (2D array): A two dimensional array of slope data.
-#     aspect (2D array): A two dimensional array of aspect data.
-#     """
-#     # Set up slope bin edges and steps.
-#     slope_bins = np.linspace(0, 90, ntheta + 1)
-
-#     # Make out output arrays. We want nan for now.
-#     los_prob = np.full((naz, ntheta), np.nan)
-#     los_count = np.full((naz, ntheta), np.nan)
-
-#     # Loop through slope bins.
-#     for i in range(len(slope_bins) - 1):
-#         # Indices where slope in current bin
-#         in_bin = (slope >= slope_bins[i]) & (slope < slope_bins[i + 1])
-
-#         # Get azimuths in this slope bin
-#         azim_in_bin = azim[in_bin].flatten()
-
-#         # If there are azimuths that meet the criteria, do some binning.
-#         if len(azim_in_bin) > threshold:
-#             # Get total binned azimuth counts
-#             azhist, _ = np.histogram(azim_in_bin, range=(0, 360), bins=naz)
-
-#             # Get binned facets in line of sight
-#             los_azim = azim[in_bin & (losmap == 1)].flatten()
-#             loshist, _ = np.histogram(los_azim, range=(0, 360), bins=naz)
-
-#             # Save los bins and los_prob
-#             los_count[:, i] = loshist
-#             los_prob[:, i] = loshist / tot_count
-
-#     return tot_count, los_count, los_prob
+    # Make in_buffer 2D arr: Pixels west of buffer == True, else False
+    in_buffer = np.zeros(dem.shape, dtype=bool)
+    in_buffer[:, : buffer + 1] = True
+    return in_buffer
 
 
 def make_los_table(
@@ -480,7 +419,7 @@ def make_los_table(
     ncinc=10,
     naz=36,
     ntheta=45,
-    threshold=50,
+    threshold=25,
     ftot_facets=FTOT_FACETS,
     flos_facets=FLOS_FACETS,
     flos_prob=FLOS_PROB,
@@ -535,19 +474,19 @@ def make_los_table(
         # Flat surface => all facets in line of sight at any inc
         if rms == 0:
             # Cludge: at rms=0 most facets are undefined, but we expect all to
-            # be visible. Set to 1 to ensure los_prob == 1
-            tot_facets[r, :, :, :] = 1
-            los_facets[r, :, :, :] = 1
+            # be visible. Set to threshold to ensure los_prob == 1
+            tot_facets[r, :, :, :] = threshold
+            los_facets[r, :, :, :] = threshold
             continue
 
         # Scale the dem to the prescirbed RMS slope and get slope, azim arrays
         dem = zsurf * factors[r]
         slope, azim = get_slope_aspect(dem)
+        slope = slope.flatten()
+        azim = azim.flatten()
 
         # Get binned counts of total facets in dem (doesn't change with inc)
-        tot_facets[r, :, :, :] = bin_slope_azim(
-            slope.flatten(), azim.flatten(), slopes, azims
-        )
+        tot_facets[r, :, :, :] = bin_slope_azim(slope, azim, slopes, azims)
         for i, inc in enumerate(incs):
             print(f"{(r*ncinc+i)/niter:.2%}...........", end="\r", flush=True)
             # Nadir view => all facets in line of sight
@@ -556,30 +495,35 @@ def make_los_table(
                 continue
 
             # Run ray trace (always from West for now) and get azims in los
-            los = raytrace(dem, inc, 270)
+            los = raytrace(dem, inc, 270).flatten()
 
             # Get buffer beyond which raytrace breaks down due to finite dem
-            buf = get_dem_los_buffer(dem, inc)
+            in_buf = get_dem_los_buffer(dem, inc).flatten()
 
-            # Subset slope and azim by buffer and keep only those in los
-            los_buf = los[:, buf:]
-            azim_los_buf = azim[:, buf:][los_buf]
-            slope_los_buf = slope[:, buf:][los_buf]
+            # Get only slope and azim in los and not in buffer
+            los_buf = los * ~in_buf
+            azim_los_buf = azim[los_buf]
+            slope_los_buf = slope[los_buf]
 
             # Get binned counts of facets in los (exclude those west of buffer)
             los_facets[r, i, :, :] = bin_slope_azim(
-                slope_los_buf.flatten(), azim_los_buf.flatten(), slopes, azims
+                slope_los_buf, azim_los_buf, slopes, azims
             )
 
+    # If bins have fewer than threshold total facets -> set outputs to nan
+    tot_facets[tot_facets < threshold] = np.nan
+    los_facets[tot_facets < threshold] = np.nan
+
     # Get facet probabilities (fraction of facets in lineofsight / total)
-    with np.errstate(divide="ignore"):
+    with np.errstate(divide="ignore"):  # Suppress div warning
         los_prob = los_facets / tot_facets
-    los_prob[tot_facets < threshold] = np.nan
+
     if write:
         np.save(ftot_facets, tot_facets)
         np.save(flos_facets, los_facets)
         np.save(flos_prob, los_prob)
-        print("Wrote ", "\n".join([ftot_facets, flos_facets, flos_prob]))
+        print("\nWrote:")
+        print("\n".join([ftot_facets, flos_facets, flos_prob]))
     return tot_facets, los_facets, los_prob
 
 
