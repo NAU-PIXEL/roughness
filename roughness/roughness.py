@@ -5,7 +5,7 @@ import numpy as np
 from numpy import sin, cos, tan, exp, pi
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shade_lookup_4D.npy")
+SHADOW_LOOKUP = os.path.join(ROUGHNESS_DIR, "data", "shadow_fraction_4D.npy")
 
 
 def get_shadow_prob(
@@ -113,15 +113,15 @@ def get_shadow_table(rms_slope, sun_theta, sun_az, shadow_lookup):
     -------
     shadow_table (2D array): Shadow fraction table (dims: az, theta)
     """
-    cinc = 1 - cos(np.radians(sun_theta))
+    # cinc = 1 - cos(np.radians(sun_theta))
 
     # Interpolate nearest values in lookup to (rms_slope, cinc)
-    rms_slopes, cincs, azs, _ = get_lookup_coords(shadow_lookup)
+    rms_slopes, incs, azs, _ = get_lookup_coords(shadow_lookup)
     rms_table = interp_lookup(rms_slope, rms_slopes, shadow_lookup)
-    cinc_table = interp_lookup(cinc, cincs, rms_table)
+    inc_table = interp_lookup(sun_theta, incs, rms_table)
 
     # Rotate table from az=270 to sun_az
-    shadow_table = rotate_az_lookup(cinc_table, sun_az, azs)
+    shadow_table = rotate_az_lookup(inc_table, sun_az, azs)
     return shadow_table
 
 
@@ -159,13 +159,13 @@ def get_lookup_coords(shadow_lookup):
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    nrms, ncinc, naz, ntheta = shadow_lookup.shape
+    nrms, ninc, naz, ntheta = shadow_lookup.shape
     rms_coords = np.linspace(0, 50, nrms)
-    ncinc_coords = np.linspace(0, 1, ncinc)
+    inc_coords = np.linspace(0, 90, ninc)  # (0, 90) degrees
     az_coords = np.linspace(0, 360, naz)
     theta_coords = np.linspace(0, 90, ntheta)
 
-    return (rms_coords, ncinc_coords, az_coords, theta_coords)
+    return (rms_coords, inc_coords, az_coords, theta_coords)
 
 
 def get_facet_grids(shadow_table, units="degrees"):

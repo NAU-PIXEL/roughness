@@ -134,3 +134,6 @@ dmypy.json
 
 # Adding in .hdf
 *.hdf
+
+# Misc
+/tmp

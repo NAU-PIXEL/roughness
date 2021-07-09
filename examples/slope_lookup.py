@@ -7,8 +7,8 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: 'Python 3.7.7 64-bit (''.venv'': venv)'
-#     name: pythonjvsc74a57bd091275eb7846d18e8f7e2f4c65c33d8e6b8dfa508726fef8c9b351c46f863c0d0
+#     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
+#     name: python3
 # ---
 
 # %% [markdown]
@@ -55,7 +55,7 @@ imgdir = path.join(r.ROUGHNESS_DIR, "docs", "img") + path.sep
 rms_slope = 20
 sun_theta = 60
 sun_az = 270
-fsl = "/home/cjtu/projects/roughness/data/shade_lookup_4D_old.npy"
+fsl = "/home/ctaiudovicic/projects/roughness/data/los_prob_4D.npy"
 sl = r.load_shadow_lookup(fsl)
 
 shadow_frac = r.get_shadow_table(rms_slope, sun_theta, sun_az, sl)
@@ -84,7 +84,8 @@ fig = plt.figure()
 ax = plt.axes(projection="3d")
 ax.view_init(45, 60)
 
-X, Y, Z = cartesian_surf.reshape((37 * 46, 3)).T + 1e-8
+nrms, ninc, nslope, naz = sl.shape
+X, Y, Z = cartesian_surf.reshape((nslope * naz, 3)).T + 1e-8
 O = np.zeros(len(X))  # origin
 
 # Color by az angle
@@ -140,8 +141,15 @@ sun_thetas = (0, 30, 60)
 for i, solar_inc in enumerate(sun_thetas):
     shadow_table = r.get_shadow_table(rms_slope, solar_inc, solar_az, sl)
     ax = fig.add_subplot(1, len(sun_thetas), i + 1, projection="3d")
-    ax.view_init(35, -75)
-    ax.plot_surface(theta_surf, azimuth_surf, shadow_table, cmap="viridis")
+    ax.view_init(35, 135)
+    ax.plot_surface(
+        theta_surf,
+        azimuth_surf,
+        1 - shadow_table,
+        cmap="viridis",
+        vmin=0,
+        vmax=1,
+    )
     ax.set_title(
         f"RMS={rms_slope}$^o$ solar_inc={solar_inc}$^o$ (az={solar_az}$^o$N)"
     )
@@ -163,7 +171,9 @@ for i, rms_slope in enumerate(rms_slopes):
     shadow_table = r.get_shadow_table(rms_slope, solar_inc, solar_az, sl)
     ax = fig.add_subplot(1, len(sun_thetas), i + 1, projection="3d")
     ax.view_init(35, -75)
-    ax.plot_surface(theta_surf, azimuth_surf, shadow_table, cmap="viridis")
+    ax.plot_surface(
+        theta_surf, azimuth_surf, shadow_table, cmap="viridis", vmin=0, vmax=1
+    )
     ax.set_title(
         f"RMS={rms_slope}$^o$ solar_inc={solar_inc}$^o$ (az={solar_az}$^o$N)"
     )
@@ -215,7 +225,9 @@ shadow_prob = r.get_shadow_prob(
 fig = plt.figure(figsize=(5, 5))
 ax = plt.axes(projection="3d")
 ax.view_init(20, -75)
-ax.plot_surface(theta_surf, azimuth_surf, shadow_prob, cmap="viridis")
+ax.plot_surface(
+    theta_surf, azimuth_surf, shadow_prob, cmap="viridis", vmin=0, vmax=1
+)
 title = f"Surface shadowing probability (RMS={rms_slope}$^o$)\n"
 title += f"Incidence: {sun_theta}$^o$ ({sun_az}$^o$N); "
 title += f"Emission: {sc_theta}$^o$ ({sc_az}$^o$N)"
@@ -226,3 +238,10 @@ ax.set_zlabel("P(shadowed)")
 plt.ticklabel_format(axis="z", style="sci", scilimits=(0, 0))
 fig.subplots_adjust(left=-0.05, right=0.95, bottom=0, top=1)
 plt.savefig(imgdir + "shadow_fraction.png", dpi=300)
+
+# %%
+import numpy as np
+
+np.array([np.nan]) / np.nan
+
+# %%

@@ -11,7 +11,7 @@ def test_get_shadow_prob_nadir():
     sun_theta, sun_az = (0, 270)  # solar inclination angle
     sc_theta, sc_az = (0, 270)  # spacecraft emisssion angle
     actual = r.get_shadow_prob(rms, sun_theta, sun_az, sc_theta, sc_az)
-    expected = np.full(actual.shape, np.nan)
+    expected = np.zeros(actual.shape)
     np.testing.assert_equal(actual, expected)
 
 
@@ -126,7 +126,7 @@ def test_load_shadow_lookup():
     """Test load_shadow_lookup"""
     # Test load from disk
     lookup = r.load_shadow_lookup()
-    assert lookup.shape == (11, 11, 37, 46)
+    assert lookup.shape == (10, 10, 36, 45)
 
     # Test load from lru_cache
     lookup_cached = r.load_shadow_lookup()
@@ -136,9 +136,9 @@ def test_load_shadow_lookup():
 def test_get_lookup_coords():
     """Test get_lookup_coords"""
     sl = np.ones((3, 6, 5, 4))
-    rms, cinc, az, theta = r.get_lookup_coords(sl)
+    rms, inc, az, theta = r.get_lookup_coords(sl)
     np.testing.assert_almost_equal(rms, [0, 25, 50])
-    np.testing.assert_almost_equal(cinc, [0, 0.2, 0.4, 0.6, 0.8, 1])
+    np.testing.assert_almost_equal(inc, [0.0, 18.0, 36.0, 54.0, 72.0, 90.0])
     np.testing.assert_almost_equal(az, [0, 90, 180, 270, 360])
     np.testing.assert_almost_equal(theta, [0, 30, 60, 90])
 
