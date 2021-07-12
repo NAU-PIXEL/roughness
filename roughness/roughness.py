@@ -4,7 +4,7 @@ import importlib.resources as pkg_resources
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
 
-with pkg_resources.path("data", "los_lookup.npy") as p:
+with pkg_resources.path("data", "los_lookup_4D.npy") as p:
     LOS_LOOKUP = p.as_posix()
 
 
@@ -52,7 +52,7 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
     view_table = get_los_table(rms, sc_theta, sc_az, los_lookup)
 
     # Normalize to get overall probability of each facet being observed
-    view_table /= np.sum(view_table)
+    view_table /= np.nansum(view_table)
     return view_table
 
 
@@ -105,7 +105,7 @@ def load_los_lookup(path=LOS_LOOKUP):
 
 def get_lookup_coords(los_lookup):
     """
-    Return coordinate arrays corresponding to each dimension of loslos lookup.
+    Return coordinate arrays corresponding to each dimension of los_lookup.
 
     Assumes los_lookup axes are in the following order with ranges:
         rms: [0, 50] degrees
@@ -121,13 +121,14 @@ def get_lookup_coords(los_lookup):
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    nrms, ninc, naz, ntheta = los_lookup.shape
+    nrms, ncinc, naz, ntheta = los_lookup.shape
     rms_coords = np.linspace(0, 50, nrms)
-    inc_coords = np.linspace(0, 90, ninc)  # (0, 90) degrees
-    az_coords = np.linspace(0, 360, naz)
-    theta_coords = np.linspace(0, 90, ntheta)
+    cinc_coords = np.linspace(1, 0, ncinc, endpoint=False)
+    slope_coords = np.linspace(0, 90, ntheta + 1)
+    azim_coords = np.linspace(0, 360, naz + 1)
+    inc_coords = np.rad2deg(np.arccos(cinc_coords))
 
-    return (rms_coords, inc_coords, az_coords, theta_coords)
+    return (rms_coords, inc_coords, azim_coords, slope_coords)
 
 
 def get_facet_grids(los_table, units="degrees"):
@@ -201,7 +202,7 @@ def rotate_az_lookup(los_table, target_az, azcoords, az0=270):
     los_table (array): Line of sight probability table (dims: az, theta)
     target_az (num): Target azimuth [deg]
     azcoords (array): Coordinate array of azimuths in los_table [deg]
-    az0 (optional: num): Solar azimuth used to derive loslos lookup [deg]
+    az0 (optional: num): Solar azimuth used to derive los_lookup [deg]
 
     Returns
     -------

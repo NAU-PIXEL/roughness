@@ -48,4 +48,4 @@ repos:
     -   id: no-commit-to-branch
         args: [-b main, -b gh-pages]
     -   id: check-added-large-files
-        args: [--maxkb=1000]
+        args: [--maxkb=1500]

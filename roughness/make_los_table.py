@@ -2,15 +2,15 @@
 import os
 from functools import lru_cache
 import numpy as np
-import helpers as rh
+from roughness import helpers as rh
 
 # from roughness import helpers as rh
 
 try:
-    import lineofsight as l
+    from roughness import lineofsight as l
 except ModuleNotFoundError as e:
     rh.compile_lineofsight()
-    import lineofsight as l
+    from roughness import lineofsight as l
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")
@@ -20,7 +20,7 @@ FZSURF = os.path.join(DATA_DIR, "zsurf.npy")
 FZSURF_FACTORS = os.path.join(DATA_DIR, "zsurf_scale_factors.npy")
 FTOT_FACETS = os.path.join(DATA_DIR, "total_facets_4D.npy")
 FLOS_FACETS = os.path.join(DATA_DIR, "los_facets_4D.npy")
-FLOS_PROB = os.path.join(DATA_DIR, "los_prob_4D.npy")
+FLOS_LOOKUP = os.path.join(DATA_DIR, "los_lookup_4D.npy")
 
 
 def cart2pol(x, y):
@@ -422,7 +422,7 @@ def make_los_table(
     threshold=25,
     ftot_facets=FTOT_FACETS,
     flos_facets=FLOS_FACETS,
-    flos_prob=FLOS_PROB,
+    flos_lookup=FLOS_LOOKUP,
     write=True,
 ):
     """
@@ -430,11 +430,11 @@ def make_los_table(
 
     Tables are generated using raytracing on a synthetic Gaussian surface with
     a range of RMS slopes and observed from a range of solar inc angles. Final
-    los_prob table is binned by facet slope/azimuth:
+    los_lookup table is binned by facet slope/azimuth:
 
-    - los_prob == 1: All facets in line of sight (i.e. visible / illuminated)
-    - los_prob == 0: No facets in line of sight (i.e. not visible / shadowed)
-    - los_prob == np.nan: Fewer than threshold facets observed in bin
+    - los_lookup == 1: All facets in line of sight (i.e. visible / illuminated)
+    - los_lookup == 0: No facets in line of sight (i.e. not visible / shadowed)
+    - los_lookup == np.nan: Fewer than threshold facets observed in bin
 
     Parameters
     ----------
@@ -449,7 +449,7 @@ def make_los_table(
     No values are returned. Three tables are saved in roughness data directory.
     total_facets_4D.npy: Number of facets in slope/azim bin.
     los_facets_4D.npy: Number of facets in line of sight in slope/azim bin.
-    los_prob_4D.npy: Probability of facets in line of sight per slope/azim bin.
+    los_lookup_4D.npy: Probability of facets in line of sight per slope/azim bin.
     """
     # Indicies for reporting progress
     niter = nrms * ncinc
@@ -474,7 +474,7 @@ def make_los_table(
         # Flat surface => all facets in line of sight at any inc
         if rms == 0:
             # Cludge: at rms=0 most facets are undefined, but we expect all to
-            # be visible. Set to threshold to ensure los_prob == 1
+            # be visible. Set to threshold to ensure los_lookup == 1
             tot_facets[r, :, :, :] = threshold
             los_facets[r, :, :, :] = threshold
             continue
@@ -514,17 +514,17 @@ def make_los_table(
     tot_facets[tot_facets < threshold] = np.nan
     los_facets[tot_facets < threshold] = np.nan
 
-    # Get facet probabilities (fraction of facets in lineofsight / total)
+    # los_lookup is fraction of facets in lineofsight / total facets in bin
     with np.errstate(divide="ignore"):  # Suppress div warning
-        los_prob = los_facets / tot_facets
+        los_lookup = los_facets / tot_facets
 
     if write:
         np.save(ftot_facets, tot_facets)
         np.save(flos_facets, los_facets)
-        np.save(flos_prob, los_prob)
+        np.save(flos_lookup, los_lookup)
         print("\nWrote:")
-        print("\n".join([ftot_facets, flos_facets, flos_prob]))
-    return tot_facets, los_facets, los_prob
+        print("\n".join([ftot_facets, flos_facets, flos_lookup]))
+    return tot_facets, los_facets, los_lookup
 
 
 if __name__ == "__main__":
