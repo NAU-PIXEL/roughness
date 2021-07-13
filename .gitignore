@@ -137,3 +137,7 @@ dmypy.json
 
 # Local testing
 /tmp
+
+# Temp data
+data/zsurf.npy
+data/zsurf_scale_factors.npy

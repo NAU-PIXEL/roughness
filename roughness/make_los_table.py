@@ -2,8 +2,13 @@
 from functools import lru_cache
 import importlib.resources as pkg_resources
 import numpy as np
-from . import helpers as rh
 
+try:
+    from . import helpers as rh
+except ImportError:
+    import helpers as rh
+
+# Import fortran lineofsight module (compile if not found)
 try:
     import lineofsight as l
 except ModuleNotFoundError as e:
@@ -21,10 +26,10 @@ FLOS_FACETS = DATAPATH.joinpath("los_facets_4D.npy")
 
 
 def make_los_table(
-    nrms=11,
-    ninc=11,
+    nrms=10,
+    ninc=10,
     naz=36,
-    ntheta=46,
+    ntheta=45,
     threshold=25,
     dem_size=10000,
     raytrace_az=270,
@@ -60,7 +65,8 @@ def make_los_table(
     los_lookup_4D.npy: Probability of facets in line of sight per slope/azim bin.
     """
     # Get line of sight lookup coordinate arrays
-    rms_arr, incs, azs, slopes = rh.get_lookup_coords(nrms, ninc, naz, ntheta)
+    rms_arr, incs, _, _ = rh.get_lookup_coords(nrms, ninc)
+    azbins, slopebins = rh.get_facet_bins(naz, ntheta)
 
     # Load in the synthetic DEM and scale factors
     zsurf = make_zsurf(dem_size)
@@ -86,7 +92,7 @@ def make_los_table(
         azim = azim.flatten()
 
         # Get binned counts of total facets in dem (doesn't change with inc)
-        tot_facets[r, :, :, :] = bin_slope_azim(slope, azim, slopes, azs)
+        tot_facets[r, :, :, :] = bin_slope_azim(azim, slope, azbins, slopebins)
         for i, inc in enumerate(incs):
             progress = (r * ninc + i) / (nrms * ninc)
             print(f"{progress:.2%}...........", end="\r", flush=True)
@@ -108,7 +114,7 @@ def make_los_table(
 
             # Get binned counts of remaining facets
             los_facets[r, i, :, :] = bin_slope_azim(
-                slope_los_buf, azim_los_buf, slopes, azs
+                azim_los_buf, slope_los_buf, azbins, slopebins
             )
 
     # If bins have fewer than threshold total facets -> set outputs to nan
@@ -280,7 +286,7 @@ def raytrace(dem, inc, azim):
     return los.T.astype(bool)
 
 
-def bin_slope_azim(slope, azim, slope_bins, azim_bins):
+def bin_slope_azim(azim, slope, azim_bins, slope_bins):
     """
     Return count of facets in each slope, azim bin using 2d histogram.
 

@@ -21,7 +21,7 @@ def compile_lineofsight(los_f90=FLOS_F90, verbose=False):
 
 
 # Line of sight helpers
-def get_lookup_coords(nrms=11, ninc=11, naz=36, ntheta=46):
+def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
     """
     Return coordinate arrays corresponding to number of elements in each axis.
 
@@ -33,19 +33,19 @@ def get_lookup_coords(nrms=11, ninc=11, naz=36, ntheta=46):
 
     Parameters
     ----------
-    nrms (int): Number of RMS slopes in [0, 50] degrees (inclusive).
-    ninc (int): Number of incidence angles in [0, 90] degrees (inclusive).
+    nrms (int): Number of RMS slopes in [0, 50) degrees.
+    ninc (int): Number of incidence angles in [0, 90) degrees.
     naz (int): Number of facet azimuth bins in [0, 360) degrees.
-    ntheta (int): Number of facet slope bins in [0, 90] degrees (inclusive).
+    ntheta (int): Number of facet slope bins in [0, 90) degrees.
 
     Return
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    rms_coords = np.linspace(0, 50, nrms)
-    cinc_coords = np.linspace(1, 0, ninc)
-    slope_coords = np.linspace(0, 90, ntheta)
+    rms_coords = np.linspace(0, 50, nrms, endpoint=False)
+    cinc_coords = np.linspace(1, 0, ninc, endpoint=False)  # [0, 90) degrees
     azim_coords = np.linspace(0, 360, naz, endpoint=False)
+    slope_coords = np.linspace(0, 90, ntheta, endpoint=False)
     inc_coords = np.rad2deg(np.arccos(cinc_coords))
 
     return (rms_coords, inc_coords, azim_coords, slope_coords)
@@ -75,6 +75,28 @@ def get_facet_grids(los_table, units="degrees"):
         theta_arr = np.radians(theta_arr)
 
     return np.meshgrid(theta_arr, az_arr)
+
+
+def get_facet_bins(naz=36, ntheta=45):
+    """
+    Return az, theta bin arrays of los_table.
+
+    Assumes los_table axes are (az, theta) with ranges:
+        az: [0, 360] degrees
+        theta: [0, 90] degrees
+
+    Parameters
+    ----------
+    los_table (array): Line of sight table (dims: az, theta)
+    units (str): Return grids in specified units ('degrees' or 'radians')
+
+    Return
+    ------
+    thetas, azs (tuple of 2D array): Bin edges of facet slope and az
+    """
+    azim_coords = np.linspace(0, 360, naz + 1)
+    slope_coords = np.linspace(0, 90, ntheta + 1)
+    return (azim_coords, slope_coords)
 
 
 # Coordinate transformations
