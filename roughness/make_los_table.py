@@ -17,12 +17,12 @@ except ModuleNotFoundError as e:
 
 # Get output file paths
 with pkg_resources.path("data", "los_lookup_4D.npy") as p:
-    FLOS_LOOKUP = p
-DATAPATH = FLOS_LOOKUP.parent
-FZSURF = DATAPATH.joinpath("zsurf.npy")
-FZSURF_FACTORS = DATAPATH.joinpath("zsurf_scale_factors.npy")
-FTOT_FACETS = DATAPATH.joinpath("total_facets_4D.npy")
-FLOS_FACETS = DATAPATH.joinpath("los_facets_4D.npy")
+    DATAPATH = p.parent
+FZSURF = DATAPATH.joinpath("zsurf.npy").as_posix()
+FZSURF_FACTORS = DATAPATH.joinpath("zsurf_scale_factors.npy").as_posix()
+FTOT_FACETS = DATAPATH.joinpath("total_facets_4D.npy").as_posix()
+FLOS_FACETS = DATAPATH.joinpath("los_facets_4D.npy").as_posix()
+FLOS_LOOKUP = DATAPATH.joinpath("los_lookup_4D.npy").as_posix()
 
 
 def make_los_table(
