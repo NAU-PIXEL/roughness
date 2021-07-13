@@ -24,8 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import ipywidgets as ipyw
 from ipywidgets import interact
-from roughness import roughness as r
-from roughness import make_los_table as mlt
+import roughness as r
 
 plt.style.use("dark_background")
 vis_cmap = cm.get_cmap("magma").copy()
@@ -35,16 +34,16 @@ shadow_cmap = cm.get_cmap("magma_r").copy()
 shadow_cmap.set_bad(color="gray")  # set nan color
 
 # Load lookups (losfrac, Num los facets, Num facets total)
-loslookup = r.load_los_lookup(mlt.FLOS_LOOKUP)
-losfacets = r.load_los_lookup(mlt.FLOS_FACETS)
-totalfacets = r.load_los_lookup(mlt.FTOT_FACETS)
+loslookup = r.load_los_lookup(r.FLOS_LOOKUP)
+losfacets = r.load_los_lookup(r.FLOS_FACETS)
+totalfacets = r.load_los_lookup(r.FTOT_FACETS)
 
 # Generic plot setup for 4D line of sight tables
 def plot_table(table, title, cmap, clabel, ax):
     """Plot 4D los-like table."""
     p = ax.imshow(
         table,
-        extent=(0, 90, 0, 360),
+        extent=(0, 90, 360, 0),
         aspect=90 / 360,
         cmap=cmap,
         interpolation="none",
@@ -63,7 +62,7 @@ def plot_table(table, title, cmap, clabel, ax):
 
 # %%
 # Get coord arrays and interactive plot sliders for rms, inc, az
-rmss, incs, azs, slopes = r.get_lookup_coords(loslookup)
+rmss, incs, azs, slopes = r.get_lookup_coords(*loslookup.shape)
 rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
 inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
 az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
@@ -84,7 +83,7 @@ def plot_shadow_table(rms=rms_slider, inc=inc_slider, az=az_slider):
 
 # %%
 # Get coord arrays and interactive plot sliders for rms, inc, az
-rmss, incs, azs, slopes = r.get_lookup_coords(loslookup)
+rmss, incs, azs, slopes = r.get_lookup_coords(*loslookup.shape)
 rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
 inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
 az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
@@ -105,7 +104,7 @@ def plot_view_table(rms=rms_slider, inc=inc_slider, az=az_slider):
 
 # %%
 # Get coord arrays and interactive plot sliders for rms, inc, az
-rmss, incs, azs, slopes = r.get_lookup_coords(losfacets)
+rmss, incs, azs, slopes = r.get_lookup_coords(*losfacets.shape)
 rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
 inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
 az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
@@ -126,7 +125,7 @@ def plot_los_facets(rms=rms_slider, inc=inc_slider, az=az_slider):
 
 # %%
 # Get coord arrays and interactive plot sliders for rms, inc, az
-rmss, incs, azs, slopes = r.get_lookup_coords(totalfacets)
+rmss, incs, azs, slopes = r.get_lookup_coords(*totalfacets.shape)
 rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
 inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
 az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
@@ -147,7 +146,7 @@ def plot_total_facets(rms=rms_slider, inc=inc_slider, az=az_slider):
 
 # %%
 # Get coord arrays and interactive plot sliders for rms, inc, az
-rmss, incs, azs, slopes = r.get_lookup_coords(loslookup)
+rmss, incs, azs, slopes = r.get_lookup_coords(*loslookup.shape)
 rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
 inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
 az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
@@ -169,7 +168,7 @@ clabels = [
 @interact
 def plot_all_tables(rms=rms_slider, inc=inc_slider, az=az_slider):
     """Plot shadowing conditions at rms, inc, az."""
-    f, axs = plt.subplots(2, 2, figsize=(14, 12))
+    f, axs = plt.subplots(2, 2, figsize=(12, 10))
     tables = [
         r.get_shadow_table(rms, inc, az, loslookup),
         r.get_view_table(rms, inc, az, loslookup),
@@ -179,4 +178,7 @@ def plot_all_tables(rms=rms_slider, inc=inc_slider, az=az_slider):
 
     for i, ax in enumerate(axs.flatten()):
         cmap = shadow_cmap if i == 0 else vis_cmap
-        ax = plot_table(tables[i], titles[i], vis_cmap, clabels[i], ax)
+        ax = plot_table(tables[i], titles[i], cmap, clabels[i], ax)
+
+
+# %%

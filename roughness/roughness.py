@@ -3,6 +3,7 @@ from functools import lru_cache
 import importlib.resources as pkg_resources
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
+from . import helpers as rh
 
 with pkg_resources.path("data", "los_lookup_4D.npy") as p:
     LOS_LOOKUP = p.as_posix()
@@ -56,7 +57,7 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
     return view_table
 
 
-def get_los_table(rms, theta, az, los_lookup):
+def get_los_table(rms, inc, az, los_lookup):
     """
     Return 2D line of sight probability table of rms rough surface facets in
     the line of sight of (theta, az).
@@ -67,7 +68,7 @@ def get_los_table(rms, theta, az, los_lookup):
     Parameters
     ----------
     rms (num): Root-mean-square surface theta describing roughness [deg]
-    theta (num or array): Inclination angle [deg]
+    inc (num or array): Inclination angle [deg]
     az (num or array): Azimuth [deg]
     los_lookup (4D array): Los lookup (dims: rms, cinc, az, theta)
 
@@ -75,87 +76,14 @@ def get_los_table(rms, theta, az, los_lookup):
     -------
     los_table (2D array): Line of sight probability table (dims: az, theta)
     """
-    cinc = cos(np.radians(theta))
-
     # Interpolate nearest values in lookup to (rms, cinc)
-    rms_slopes, cincs, azs, _ = get_lookup_coords(los_lookup)
+    rms_slopes, incs, azs, _ = rh.get_lookup_coords(*los_lookup.shape)
     rms_table = interp_lookup(rms, rms_slopes, los_lookup)
-    cinc_table = interp_lookup(cinc, cincs, rms_table)
+    inc_table = interp_lookup(inc, incs, rms_table)
 
     # Rotate table from az=270 to az
-    los_table = rotate_az_lookup(cinc_table, az, azs)
+    los_table = rotate_az_lookup(inc_table, az, azs)
     return los_table
-
-
-@lru_cache(maxsize=1)  # Cache 1 los_lookup
-def load_los_lookup(path=LOS_LOOKUP):
-    """
-    Return line of sight lookup at path.
-
-    Parameters
-    ----------
-    path (optional: str): Path to los lookup file containing 4D numpy array
-
-    Returns
-    -------
-    los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
-    """
-    return np.load(path, allow_pickle=True)
-
-
-def get_lookup_coords(los_lookup):
-    """
-    Return coordinate arrays corresponding to each dimension of los_lookup.
-
-    Assumes los_lookup axes are in the following order with ranges:
-        rms: [0, 50] degrees
-        cinc: [0, 1]
-        az: [0, 360] degrees
-        theta: [0, 90] degrees
-
-    Parameters
-    ----------
-    los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
-
-    Return
-    ------
-    lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
-    """
-    nrms, ncinc, naz, ntheta = los_lookup.shape
-    rms_coords = np.linspace(0, 50, nrms)
-    cinc_coords = np.linspace(1, 0, ncinc, endpoint=False)
-    slope_coords = np.linspace(0, 90, ntheta + 1)
-    azim_coords = np.linspace(0, 360, naz + 1)
-    inc_coords = np.rad2deg(np.arccos(cinc_coords))
-
-    return (rms_coords, inc_coords, azim_coords, slope_coords)
-
-
-def get_facet_grids(los_table, units="degrees"):
-    """
-    Return 2D grids of surface facet slope and azimuth angles of los_table.
-
-    Assumes los_table axes are (az, theta) with ranges:
-        az: [0, 360] degrees
-        theta: [0, 90] degrees
-
-    Parameters
-    ----------
-    los_table (array): Line of sight table (dims: az, theta)
-    units (str): Return grids in specified units ('degrees' or 'radians')
-
-    Return
-    ------
-    thetas, azs (tuple of 2D array): Coordinate grids of facet slope and az
-    """
-    naz, ntheta = los_table.shape
-    az_arr = np.linspace(0, 360, naz)
-    theta_arr = np.linspace(0, 90, ntheta)
-    if units == "radians":
-        az_arr = np.radians(az_arr)
-        theta_arr = np.radians(theta_arr)
-
-    return np.meshgrid(theta_arr, az_arr)
 
 
 def interp_lookup(xvalue, xcoords, values):
@@ -214,34 +142,6 @@ def rotate_az_lookup(los_table, target_az, azcoords, az0=270):
     return np.concatenate((los_table[az_shift:], los_table[:az_shift]))
 
 
-def sph2cart(theta, phi, radius=1):
-    """
-    Convert from spherical (theta, phi, r) to cartesian (x, y, z) coordinates.
-
-    Theta and phi must be specified in radians and returned units correspond to
-    units of r, default is unitless (r=1 is unit vector). Returns vectors along
-    z-axis (e.g., if theta and phi are int/float return 1x1x3 vector; if theta
-    and phi are MxN arrays return 3D array of vectors MxNx3).
-
-    Parameters
-    ----------
-    theta (num or array): Polar angle [rad].
-    phi (num or array): Azimuthal angle [rad].
-    radius (num or array): Radius (default=1).
-
-    Returns
-    -------
-    cartesian (array): Cartesian vector(s), same shape as theta and phi.
-    """
-    return np.dstack(
-        [
-            radius * sin(theta) * cos(phi),
-            radius * sin(theta) * sin(phi),
-            radius * cos(theta),
-        ]
-    ).squeeze()
-
-
 def slope_dist(theta, theta0, dist="rms"):
     """
     Return slope probability distribution for rough fractal surfaces. Computes
@@ -279,3 +179,20 @@ def slope_dist(theta, theta0, dist="rms"):
     # Normalize to convert to probability
     slopes = slopes / np.sum(slopes)
     return slopes
+
+
+# File I/O
+@lru_cache(maxsize=1)
+def load_los_lookup(path=LOS_LOOKUP):
+    """
+    Return line of sight lookup at path.
+
+    Parameters
+    ----------
+    path (optional: str): Path to los lookup file containing 4D numpy array
+
+    Returns
+    -------
+    los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
+    """
+    return np.load(path, allow_pickle=True)
