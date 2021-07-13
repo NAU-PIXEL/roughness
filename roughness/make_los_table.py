@@ -2,15 +2,17 @@
 import os
 from functools import lru_cache
 import numpy as np
-from roughness import helpers as rh
-
-# from roughness import helpers as rh
 
 try:
-    from roughness import lineofsight as l
+    from roughness import helpers as rh
+except:
+    import helpers as rh
+
+try:
+    import lineofsight as l
 except ModuleNotFoundError as e:
     rh.compile_lineofsight()
-    from roughness import lineofsight as l
+    import lineofsight as l
 
 ROUGHNESS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROUGHNESS_DIR, "data")

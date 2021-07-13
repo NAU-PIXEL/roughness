@@ -75,7 +75,7 @@ def get_los_table(rms, theta, az, los_lookup):
     -------
     los_table (2D array): Line of sight probability table (dims: az, theta)
     """
-    cinc = 1 - cos(np.radians(theta))
+    cinc = cos(np.radians(theta))
 
     # Interpolate nearest values in lookup to (rms, cinc)
     rms_slopes, cincs, azs, _ = get_lookup_coords(los_lookup)
