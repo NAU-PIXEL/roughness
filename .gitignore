@@ -138,6 +138,7 @@ dmypy.json
 # Local testing
 /tmp
 
-# Temp data
-data/zsurf.npy
-data/zsurf_scale_factors.npy
+# Data folder except !items
+/data/*
+!data/__init__.py
+!data/los_lookup_4D.npy
