@@ -135,5 +135,10 @@ dmypy.json
 # Adding in .hdf
 *.hdf
 
-# Misc
+# Local testing
 /tmp
+
+# Data folder except !items
+/data/*
+!data/__init__.py
+!data/los_lookup_4D.npy

@@ -35,9 +35,11 @@ repos:
         - --output-format=parseable
         - --reports=no
         - -d R0913
+        - -d R0914
         - -d C0103
         - -d E0401
         - -d I1101
+        - -d W0511
       always_run: false  # suppress error if run on no files
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
@@ -48,4 +50,4 @@ repos:
     -   id: no-commit-to-branch
         args: [-b main, -b gh-pages]
     -   id: check-added-large-files
-        args: [--maxkb=1000]
+        args: [--maxkb=1500]
