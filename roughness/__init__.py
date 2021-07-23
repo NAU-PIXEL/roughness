@@ -14,6 +14,13 @@ from .roughness import (
     load_los_lookup,
 )
 
+from .emission import (
+    TEMP_TABLE,
+    get_temperature_table,
+    get_temperature_coords,
+    load_temperature_table,
+)
+
 try:
     from importlib_metadata import PackageNotFoundError, version
 except ImportError:  # pragma: no cover

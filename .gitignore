@@ -138,6 +138,9 @@ dmypy.json
 # Local testing
 /tmp
 
+# Mac hidden
+.DS_store
+
 # Data folder except !items
 /data/*
 !data/__init__.py
