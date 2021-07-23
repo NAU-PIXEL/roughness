@@ -145,3 +145,4 @@ dmypy.json
 /data/*
 !data/__init__.py
 !data/los_lookup_4D.npy
+!data/Bennu_EQ1_KRC_temp_table.npy
