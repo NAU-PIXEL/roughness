@@ -1,15 +1,12 @@
 """Main module."""
 from functools import lru_cache
-import importlib.resources as pkg_resources
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
 from . import helpers as rh
-
-with pkg_resources.path("data", "los_lookup_4D.npy") as p:
-    LOS_LOOKUP = p.as_posix()
+from .config import FLOS_LOOKUP
 
 
-def get_shadow_table(rms, sun_theta, sun_az, los_lookup=LOS_LOOKUP):
+def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOS_LOOKUP):
     """
     Return probability that each facet is in shadow given (sun_that, sun_az)
     on a surface with rms roughness.
@@ -19,20 +16,18 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=LOS_LOOKUP):
     rms_slope (num): Root-mean-square slope of roughness [deg]
     sun_theta (num or array): Solar inclination angle [deg]
     sun_az (num or array): Solar azimuth [deg]
-    los_lookup (str or 4D array): Path to file or los lookup array
+    los_lookup (path or 4D array): Path to file or los lookup array
 
     Returns
     -------
     shadow_prob (2D array): Shadow probability table (dims: az, theta)
     """
-    if isinstance(los_lookup, str):
-        los_lookup = load_los_lookup(los_lookup)
     # Invert to get P(shadowed) since los_lookup defaults to P(illuminated)
     shadow_table = 1 - get_los_table(rms, sun_theta, sun_az, los_lookup)
     return shadow_table
 
 
-def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
+def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOS_LOOKUP):
     """
     Return probability that each facet is observed from (sc_theta, sc_az)
     on a surface with rms roughness.
@@ -42,14 +37,12 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
     rms_slope (num): Root-mean-square slope of roughness [deg]
     sc_theta (num or array): Spacecraft emission angle [deg]
     sc_az (num or array): Spacecraft azimuth [deg]
-    los_lookup (str or 4D array): Path to file or los lookup array
+    los_lookup (path or 4D array): Path to file or los lookup array
 
     Returns
     -------
     view_prob (2D array): View probability table (dims: az, theta)
     """
-    if isinstance(los_lookup, str):
-        los_lookup = load_los_lookup(los_lookup)
     view_table = get_los_table(rms, sc_theta, sc_az, los_lookup)
 
     # Normalize to get overall probability of each facet being observed
@@ -57,7 +50,7 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=LOS_LOOKUP):
     return view_table
 
 
-def get_los_table(rms, inc, az, los_lookup):
+def get_los_table(rms, inc, az=270, los_lookup=FLOS_LOOKUP):
     """
     Return 2D line of sight probability table of rms rough surface facets in
     the line of sight of (theta, az).
@@ -70,12 +63,17 @@ def get_los_table(rms, inc, az, los_lookup):
     rms (num): Root-mean-square surface theta describing roughness [deg]
     inc (num or array): Inclination angle [deg]
     az (num or array): Azimuth [deg]
-    los_lookup (4D array): Los lookup (dims: rms, cinc, az, theta)
+    los_lookup (path or 4D array): Los lookup (dims: rms, cinc, az, theta)
 
     Returns
     -------
     los_table (2D array): Line of sight probability table (dims: az, theta)
     """
+    # If los_lookup is a path, load it
+    try:
+        _ = los_lookup.shape
+    except AttributeError:
+        los_lookup = load_los_lookup(los_lookup)
     # Interpolate nearest values in lookup to (rms, cinc)
     rms_slopes, incs, azs, _ = rh.get_lookup_coords(*los_lookup.shape)
     rms_table = interp_lookup(rms, rms_slopes, los_lookup)
@@ -183,7 +181,7 @@ def slope_dist(theta, theta0, dist="rms"):
 
 # File I/O
 @lru_cache(maxsize=1)
-def load_los_lookup(path=LOS_LOOKUP):
+def load_los_lookup(path=FLOS_LOOKUP):
     """
     Return line of sight lookup at path.
 

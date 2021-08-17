@@ -1,24 +1,12 @@
 """Roughness helper functions"""
+import os
+import contextlib
 from pathlib import Path
 import numpy as np
 import numpy.f2py
-
-FLOS_F90 = Path(__file__).parent / "lineofsight.f90"
-
-
-# Compile Fortran
-def compile_lineofsight(los_f90=FLOS_F90, verbose=False):
-    """Compile lineofsight module with numpy f2py. Error if no compiler."""
-    with open(los_f90) as f:
-        src = f.read()
-    failed = numpy.f2py.compile(
-        src, "lineofsight", verbose=verbose, source_fn=los_f90
-    )
-    if failed:
-        msg = "Cannot compile Fortran raytracing code. Please ensure you have \
-               a F90 compatible Fortran compiler (e.g. gfortran) installed."
-        raise ImportError(msg)
-
+import jupytext
+from . import config as cfg
+from . import __version__
 
 # Line of sight helpers
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
@@ -164,3 +152,125 @@ def sph2cart(theta, phi, radius=1):
             radius * np.cos(theta),
         ]
     ).squeeze()
+
+
+# File I/O helpers
+def rm_regex(dirpath, regex):
+    """Remove all files matching regex in dirpath."""
+    dirpath = Path(dirpath)
+    for f in dirpath.rglob(regex):
+        f.unlink()
+
+
+def fname_with_demsize(filename, demsize):
+    """
+    Return filename with demsize appended to the end.
+
+    Parameters
+    ----------
+    fname (str or Path): Filename to append to.
+    demsize (int): Length of dem in pixels.
+
+    Returns
+    -------
+    fname_with_demsize (str): New filename with new demsize appended.
+    """
+    filename = Path(filename)
+    return filename.with_name(f"{filename.stem}_s{demsize}{filename.suffix}")
+
+
+def versions_match(version_a, version_b, precision=2):
+    """
+    Check if semantic versions match to precision (default 2).
+
+    Examples
+    --------
+    >>> versions_match('1.0.0', '1.2.3', precision=1)
+    True
+    >>> versions_match('1.2.0', '1.2.3', precision=2)
+    True
+    >>> versions_match('1.2.3', '1.2.3', precision=3)
+    True
+    """
+    va_split = version_a.split(".")
+    vb_split = version_b.split(".")
+    for i in range(precision):
+        if va_split[i] != vb_split[i]:
+            return False
+    return True
+
+
+def check_data_updated():
+    """Check if data version is up to date."""
+    data_version = get_data_version()
+    if data_version is None or not versions_match(data_version, __version__):
+        print("WARNING: The roughness/data folder is not up to date!")
+        print("Update to the newest lookup tables with -d flag.")
+        return False
+    return True
+
+
+def get_data_version(data_version_file=cfg.FDATA_VERSION):
+    """Get data version in data/data_version.txt."""
+    data_version = None
+    try:
+        with open(data_version_file, "r") as f:
+            data_version = f.readline().strip()
+    except FileNotFoundError:
+        pass
+    return data_version
+
+
+def set_data_version(data_version_file=cfg.FDATA_VERSION):
+    """Set data version in data/data_version.txt."""
+    with open(data_version_file, "w") as f:
+        f.write(__version__)
+
+
+@contextlib.contextmanager
+def change_working_directory(path):
+    """Change working directory and revert to previous on exit."""
+    prev_cwd = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)
+
+
+# Fortran helpers
+def compile_lineofsight(los_f90=cfg.FLOS_F90, verbose=False):
+    """Compile lineofsight module with numpy f2py. Error if no compiler."""
+    with open(los_f90) as f:
+        src = f.read()
+    failed = numpy.f2py.compile(
+        src, "lineofsight", verbose=verbose, source_fn=los_f90
+    )
+    if failed:
+        msg = "Cannot compile Fortran raytracing code. Please ensure you have \
+               a F90 compatible Fortran compiler (e.g. gfortran) installed."
+        raise ImportError(msg)
+
+
+def import_lineofsight(fortran_dir=cfg.FORTRAN_DIR):
+    """Import lineofsight module. Compile first if not found."""
+    # pragma pylint: disable=import-outside-toplevel
+    with change_working_directory(fortran_dir):
+        try:
+            from .fortran import lineofsight
+        except (ImportError, ModuleNotFoundError):
+            compile_lineofsight()
+            from .fortran import lineofsight
+    return lineofsight
+
+
+def build_jupyter_notebooks(nbpath=cfg.EXAMPLES_DIR):
+    """Build Jupyter notebooks using Jupytext."""
+    print("Setting up Jupyter notebooks")
+    for nb_py in nbpath.rglob("*.py"):
+        fout = nb_py.with_suffix(".ipynb")
+        if fout.exists():
+            print(f"Skipping existing notebook {fout}")
+        else:
+            jupytext.write(jupytext.read(nb_py), fout)
+            print(f"Wrote {fout}")
