@@ -52,15 +52,24 @@ $ git clone https://github.com/NAU-PIXEL/roughness.git
 # Enter the repository
 $ cd roughness
 
-# Install dependencies
+# Install dependencies into a venv with poetry
 $ poetry install
 
-# Either open a Jupyter server
+# Run setup script (may take awhile)
+$ poetry run setup_roughness.py
+
+# Now you can open a Jupyter server...
 $ poetry run jupyter notebook
 
-# Or activate the venv from your Python editor of choice
-# The venv is located at /home/username/roughness/.venv/bin/python
+# or activate the venv directly from the terminal...
+$ poetry shell
+$ python
+
+# or activate the venv from your favorite IDE
+# The venv is located at ~/roughness/.venv/bin/python
 ```
+
+## Updating to the latest version
 
 ## Contribute
 

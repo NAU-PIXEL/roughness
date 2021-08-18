@@ -1,19 +1,4 @@
-"""roughness namespace."""
-# Import functions into main roughness namespace (e.g. roughness.func())
-from .helpers import get_lookup_coords
-from .make_los_table import (
-    make_los_table,
-    FLOS_LOOKUP,
-    FLOS_FACETS,
-    FTOT_FACETS,
-)
-from .roughness import (
-    get_shadow_table,
-    get_view_table,
-    get_los_table,
-    load_los_lookup,
-)
-
+"""Init roughness."""
 try:
     from importlib_metadata import PackageNotFoundError, version
 except ImportError:  # pragma: no cover

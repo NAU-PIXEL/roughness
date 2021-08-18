@@ -1,28 +1,15 @@
 """Generate line of sight lookup tables."""
 from functools import lru_cache
-import importlib.resources as pkg_resources
 import numpy as np
+from . import helpers as rh
+from .config import FZSURF, FZ_FACTORS, FTOT_FACETS, FLOS_FACETS, FLOS_LOOKUP
 
-try:
-    from . import helpers as rh
-except ImportError:
-    import helpers as rh
+lineofsight = rh.import_lineofsight()  # Imports FORTRAN lineofsight module
 
-# Import fortran lineofsight module (compile if not found)
-try:
-    import lineofsight as l
-except ModuleNotFoundError as e:
-    rh.compile_lineofsight()
-    import lineofsight as l
 
-# Get output file paths
-with pkg_resources.path("data", "los_lookup_4D.npy") as p:
-    DATAPATH = p.parent
-FZSURF = DATAPATH.joinpath("zsurf.npy").as_posix()
-FZSURF_FACTORS = DATAPATH.joinpath("zsurf_scale_factors.npy").as_posix()
-FTOT_FACETS = DATAPATH.joinpath("total_facets_4D.npy").as_posix()
-FLOS_FACETS = DATAPATH.joinpath("los_facets_4D.npy").as_posix()
-FLOS_LOOKUP = DATAPATH.joinpath("los_lookup_4D.npy").as_posix()
+def make_default_los_table():
+    """Run make_los_table with default values."""
+    make_los_table(default=True)
 
 
 def make_los_table(
@@ -31,12 +18,13 @@ def make_los_table(
     naz=36,
     ntheta=45,
     threshold=25,
-    dem_size=10000,
-    raytrace_az=270,
+    demsize=10000,
+    losaz=270,
     ftot_facets=FTOT_FACETS,
     flos_facets=FLOS_FACETS,
     flos_lookup=FLOS_LOOKUP,
     write=True,
+    default=False,
 ):
     """
     Generate line of sight probability table with dims (rms, inc, slope, az).
@@ -69,7 +57,7 @@ def make_los_table(
     azbins, slopebins = rh.get_facet_bins(naz, ntheta)
 
     # Load in the synthetic DEM and scale factors
-    zsurf = make_zsurf(dem_size)
+    zsurf = make_zsurf(demsize)
     factors = make_scale_factors(zsurf, rms_arr)
 
     # Init total and line of sight facet arrays binned by slope/azim
@@ -94,15 +82,13 @@ def make_los_table(
         # Get binned counts of total facets in dem (doesn't change with inc)
         tot_facets[r, :, :, :] = bin_slope_azim(azim, slope, azbins, slopebins)
         for i, inc in enumerate(incs):
-            progress = (r * ninc + i) / (nrms * ninc)
-            print(f"{progress:.2%}...........", end="\r", flush=True)
             # Nadir view => all facets in line of sight
             if inc == 0:
                 los_facets[r, i, :, :] = tot_facets[r, i, :, :]
                 continue
 
             # Run ray trace to compute dem facets in line of sight
-            los = raytrace(dem, inc, raytrace_az).flatten()
+            los = raytrace(dem, inc, losaz).flatten()
 
             # Get buffer beyond which raytrace breaks down due to finite dem
             in_buf = get_dem_los_buffer(dem, inc).flatten()
@@ -116,7 +102,12 @@ def make_los_table(
             los_facets[r, i, :, :] = bin_slope_azim(
                 azim_los_buf, slope_los_buf, azbins, slopebins
             )
+            # Report progress
+            ppct = (100 * (r * ninc + i) / (nrms * ninc)) + 1
+            pbar = "=" * int(ppct // 5)
+            print(f"Raytracing [{pbar:20s}] {ppct:.2f}%", end="\r", flush=True)
 
+    print("\nGenerating lineofsight lookup table...")
     # If bins have fewer than threshold total facets -> set outputs to nan
     tot_facets[tot_facets < threshold] = np.nan
     los_facets[tot_facets < threshold] = np.nan
@@ -126,15 +117,17 @@ def make_los_table(
         los_lookup = los_facets / tot_facets
 
     if write:
-        np.save(ftot_facets, tot_facets)
-        np.save(flos_facets, los_facets)
-        np.save(flos_lookup, los_lookup)
-        print("\nWrote:")
-        print("\n".join([ftot_facets, flos_facets, flos_lookup]))
+        fnames = [ftot_facets, flos_facets, flos_lookup]
+        tables = [tot_facets, los_facets, los_lookup]
+        for fout, table in zip(fnames, tables):
+            if not default:
+                fout = rh.fname_with_demsize(fout, zsurf.shape[0])
+            np.save(fout, table)
+            print(f"Saved {fout}")
     return tot_facets, los_facets, los_lookup
 
 
-def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
+def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, default=False):
     """
     Return a synthetic surface with self-affine roughness.
     Much of this is detailed in this paper:
@@ -143,7 +136,7 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
 
     Parameters
     ----------
-    n: Size in the square array.
+    n: Side length of synthetic surface. Default=10000
     H: Hurst exponent.
     qr: Rolloff wavelength in units of q (wavevector; 1/m).
     fout (str): Path to write z surface.
@@ -152,7 +145,9 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
     -------
     zsurf (n x n arr): Artifical z surface with self-affine roughness.
     """
-    # Try to load zsurf
+    # Return zsurf from fout if it exists and is correct size
+    if not default:
+        fout = rh.fname_with_demsize(fout, n)
     zsurf = load_zsurf(fout)
     if zsurf is not None and zsurf.shape == (n, n):
         print(f"Loaded zsurf from {fout}")
@@ -225,10 +220,13 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF):
     # Voila. A real array of height values with self-affine roughness.
     # Save it!
     np.save(fout, norm_zsurf)
+    print(f"Wrote zsurf to {fout}")
     return norm_zsurf
 
 
-def make_scale_factors(zsurf, rms_arr, write=True, fout=FZSURF_FACTORS):
+def make_scale_factors(
+    zsurf, rms_arr, write=True, fout=FZ_FACTORS, default=False
+):
     """
     Determine scale factors to impose a specific RMS slope to synthetic surface.
 
@@ -236,6 +234,8 @@ def make_scale_factors(zsurf, rms_arr, write=True, fout=FZSURF_FACTORS):
     -------
     10 element vector of multiplicative coefficients from 5-50 degrees RMS slope
     """
+    if not default:
+        fout = rh.fname_with_demsize(fout, zsurf.shape[0])
     # Try to load scale factors and check they are correct length
     scale_factors = load_zsurf_scale_factors(fout)
     if scale_factors is not None and len(scale_factors) == len(rms_arr):
@@ -258,6 +258,7 @@ def make_scale_factors(zsurf, rms_arr, write=True, fout=FZSURF_FACTORS):
     scale_factors = rms_mult(rms_arr)
     if write:
         np.save(fout, scale_factors)
+        print(f"Wrote scale_factors to {fout}")
     return scale_factors
 
 
@@ -282,7 +283,7 @@ def raytrace(dem, inc, azim):
     # If inc == 0 everything is illuminated. No point in calling function.
     if inc != 0:
         # Passing the proper inputs to the fortran module.
-        los = l.lineofsight(dem.flatten(), inc, azim, los)
+        los = lineofsight.lineofsight(dem.flatten(), inc, azim, los)
     return los.T.astype(bool)
 
 
@@ -466,7 +467,7 @@ def load_zsurf(path=FZSURF):
 
 
 @lru_cache(1)
-def load_zsurf_scale_factors(path=FZSURF_FACTORS):
+def load_zsurf_scale_factors(path=FZ_FACTORS):
     """
     Return scale factors at path.
 
@@ -483,7 +484,3 @@ def load_zsurf_scale_factors(path=FZSURF_FACTORS):
     except FileNotFoundError:
         zsurf_factors = None
     return zsurf_factors
-
-
-if __name__ == "__main__":
-    _ = make_los_table()
