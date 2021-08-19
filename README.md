@@ -47,7 +47,7 @@ To clone and run the package, you'll need [Git](https://git-scm.com) and [Poetry
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/NAU-PIXEL/roughness.git
+$ git clone git@github.com:NAU-PIXEL/roughness.git
 
 # Enter the repository
 $ cd roughness
@@ -59,7 +59,7 @@ $ poetry install
 $ poetry run setup_roughness.py
 
 # Now you can open a Jupyter server...
-$ poetry run jupyter notebook
+$ poetry run python jupyter notebook
 
 # or activate the venv directly from the terminal...
 $ poetry shell
