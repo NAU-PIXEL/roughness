@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("--ntheta", "-t", type=int, help=cfg.HNTHETA)
     parser.add_argument("--threshold", "-o", type=int, help=cfg.HTHRESH)
     parser.add_argument("--demsize", "-s", type=int, help=cfg.HDSIZE)
-    parser.add_argument("--losaz", "-l", type=int, help=cfg.HRAZ)
+    parser.add_argument("--az0", "-z", type=int, help=cfg.HRAZ)
     parser.add_argument("--default", "-d", action="store_true")
     parser.add_argument("--nolos", "-n", action="store_true")
     args = parser.parse_args()

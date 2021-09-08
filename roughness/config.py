@@ -1,5 +1,25 @@
 """Roughness configuration."""
 from pathlib import Path
+from . import __version__
+
+# Defaults
+VERSION = __version__
+LUT_NAMES = ("totfacets", "losfacets", "losprob")
+LUT_LONGNAMES = ("No. total facets", "No. LOS facets", "Prob(LOS)")
+LUT_COORDS = ("rms", "inc", "az", "theta")
+LUT_COORD_NAMES = {
+    "rms": "RMS Roughness",
+    "inc": "Incidence Angle",
+    "az": "Facet Azimuth Angle",
+    "theta": "Facet Slope Angle",
+}
+NRMS = 10  # Number of RMS slopes in [0, 50) degrees.
+NINC = 10  # Number of incidence angles in [0, 90) degrees.
+NAZ = 36  # Number of facet azimuth bins in [0, 360) degrees.
+NTHETA = 45  # Number of facet slope bins in [0, 90) degrees.
+THRESHOLD = 25  # Minimum number of valid facets to do binning, else nan
+DEMSIZE = 10000  # Size length of square dem in pixels.
+AZ0 = 270  # Azimuth of LOS [degrees].
 
 # Paths (dirs)
 ROOT_DIR = Path(__file__).parents[1]
@@ -18,6 +38,7 @@ FLOS_F90 = FORTRAN_DIR / "lineofsight.f90"
 # Paths (make_los_table.py)
 FZSURF = DATA_DIR / "zsurf.npy"
 FZ_FACTORS = DATA_DIR / "zsurf_scale_factors.npy"
+FLOOKUP = DATA_DIR / "default_lookup.nc"
 FTOT_FACETS = DATA_DIR / "total_facets_4D.npy"
 FLOS_FACETS = DATA_DIR / "los_facets_4D.npy"
 FLOS_LOOKUP = DATA_DIR / "los_lookup_4D.npy"

@@ -4,11 +4,44 @@ import contextlib
 from pathlib import Path
 import numpy as np
 import numpy.f2py
+import xarray as xr
 import jupytext
 from . import config as cfg
 from . import __version__
 
 # Line of sight helpers
+def lookup2xarray(lookups, nrms, ninc, naz, ntheta):
+    """
+    Convert list of default lookups to xarray.DataSet.
+
+    Parameters
+    ----------
+    lookups (array): Lookup tables (e.g. from make_los_table).
+
+    Returns
+    -------
+    xarray.DataArray: xarray.DataArray with labeled dims and coords.
+    """
+    names = cfg.LUT_NAMES
+    longnames = cfg.LUT_LONGNAMES
+    coords = get_lookup_coords(nrms, ninc, naz, ntheta)
+    coords_xr = list(zip(cfg.LUT_COORDS, coords))
+    coord_names = cfg.LUT_COORD_NAMES
+    for i, lut in enumerate(lookups):
+        # Make DataArray
+        da = xr.DataArray(lut, coords=coords_xr, name=names[i])
+        da.attrs["long_name"] = longnames[i]
+        for coord in da.coords:
+            da.coords[coord].attrs["long_name"] = coord_names[coord]
+            da.coords[coord].attrs["units"] = "deg"
+        # Add DataArray to DataSet
+        if i == 0:
+            ds = da.to_dataset()
+        else:
+            ds[names[i]] = da
+    return ds
+
+
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
     """
     Return coordinate arrays corresponding to number of elements in each axis.

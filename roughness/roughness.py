@@ -2,11 +2,51 @@
 from functools import lru_cache
 import numpy as np
 from numpy import sin, cos, tan, exp, pi
+import xarray as xr
 from . import helpers as rh
-from .config import FLOS_LOOKUP
+from .config import FLOOKUP, AZ0
 
 
-def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOS_LOOKUP):
+def get_table_xarr(params, dims=None, da="losprob", los_lookup=FLOOKUP):
+    """
+    Return interpolated xarray.DataArray of los_lookup table at given params.
+
+    Parameters
+    ----------
+    params (list): List of values to query in los_lookup.
+    dims (list of str): Dimensions name of each param (default: index order).
+    da (str): DataArray in xarray.DataSet to query (default: losprob)
+    los_lookup (path or xarray): Path to file or los lookup array.
+
+    Returns
+    -------
+    table (xarray.DataArray): Table of los_lookup values
+    """
+    # Load los_lookup
+    if not isinstance(los_lookup, (xr.Dataset, xr.DataArray)):
+        los_lookup = load_los_lookup(los_lookup)
+
+    # Get desired DataArray from los_lookup DataSet
+    if isinstance(los_lookup, xr.Dataset):
+        los_lookup = los_lookup[da]
+
+    # Get table dimensions
+    if dims is None:
+        dims = list(los_lookup.dims)
+
+    # Get table coordinates
+    coords = {dims[i]: params[i] for i in range(len(params))}
+
+    # Rotate los_lookup to target azimuth
+    if "az" in coords:
+        los_lookup = rotate_az_lookup(los_lookup, coords["az"])
+
+    # Get table values
+    table = los_lookup.interp(coords, method="linear")
+    return table
+
+
+def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     """
     Return probability that each facet is in shadow given (sun_that, sun_az)
     on a surface with rms roughness.
@@ -27,7 +67,7 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOS_LOOKUP):
     return shadow_table
 
 
-def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOS_LOOKUP):
+def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
     """
     Return probability that each facet is observed from (sc_theta, sc_az)
     on a surface with rms roughness.
@@ -50,7 +90,7 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOS_LOOKUP):
     return view_table
 
 
-def get_los_table(rms, inc, az=270, los_lookup=FLOS_LOOKUP):
+def get_los_table(rms, inc, az=270, los_lookup=FLOOKUP):
     """
     Return 2D line of sight probability table of rms rough surface facets in
     the line of sight of (theta, az).
@@ -117,7 +157,7 @@ def interp_lookup(xvalue, xcoords, values):
     return interp_values
 
 
-def rotate_az_lookup(los_table, target_az, azcoords, az0=270):
+def rotate_az_lookup(los_table, target_az, az0=None):
     """
     Return los_table rotated from az0 to nearest target_az in azcoords.
 
@@ -134,10 +174,13 @@ def rotate_az_lookup(los_table, target_az, azcoords, az0=270):
     -------
     rotated_los_table (array): los_table rotated on az axis (dims: az, theta)
     """
+    if az0 is None:
+        az0 = float(los_table.attrs.get("az0", AZ0))
+    azcoords = los_table.az.values
     ind0 = np.argmin(np.abs(azcoords - az0))
     ind = np.argmin(np.abs(azcoords - target_az))
-    az_shift = ind0 - ind
-    return np.concatenate((los_table[az_shift:], los_table[:az_shift]))
+    az_shift = ind - ind0
+    return los_table.roll(az=az_shift, roll_coords=False)
 
 
 def slope_dist(theta, theta0, dist="rms"):
@@ -181,7 +224,7 @@ def slope_dist(theta, theta0, dist="rms"):
 
 # File I/O
 @lru_cache(maxsize=1)
-def load_los_lookup(path=FLOS_LOOKUP):
+def load_los_lookup(path=FLOOKUP):
     """
     Return line of sight lookup at path.
 
@@ -193,4 +236,14 @@ def load_los_lookup(path=FLOS_LOOKUP):
     -------
     los_lookup (4D array): Shadow lookup (dims: rms, cinc, az, theta)
     """
-    return np.load(path, allow_pickle=True)
+    try:
+        ext = path.suffix
+    except AttributeError:
+        ext = "." + path.split(".")[-1]
+    if ext == ".nc":
+        los_lookup = xr.open_dataset(path)
+    elif ext == ".npy":
+        los_lookup = np.load(path)
+    else:
+        raise ValueError("Invalid los_lookup file format.")
+    return los_lookup
