@@ -13,8 +13,18 @@
  <!-- Test Coverage -->
   <!-- <a href="https://codecov.io/github/choojs/choo">
     <img src="https://img.shields.io/codecov/c/github/choojs/choo/master.svg?style=flat-square"
-      alt="Test Coverage" /> -->
-  </a>
+      alt="Test Coverage" />
+  </a> -->
+
+  <!-- DOI -->
+  <a href="https://zenodo.org/badge/latestdoi/328820617"><img src="https://zenodo.org/badge/328820617.svg" alt="DOI"></a>
+
+  <!-- CI -->
+  <a href="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml/badge.svg" alt="Code Quality and Tests"></a>
+
+  <!-- CI -->
+  <a href="https://nau-pixel.github.io/roughness/"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/docs_publish.yml/badge.svg" alt="Documentation"></a>
+
   <!-- Code Style -->
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg"
@@ -56,7 +66,7 @@ $ cd roughness
 $ poetry install
 
 # Run setup script (may take awhile)
-$ poetry run setup_roughness.py
+$ poetry run python setup_roughness.py
 
 # Now you can open a Jupyter server...
 $ poetry run python jupyter notebook
