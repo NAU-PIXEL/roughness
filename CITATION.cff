@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Tai Udovicic"
+  given-names: "Christian J."
+  orcid: "https://orcid.org/0000-0001-9972-1534"
+- family-names: "Haberle"
+  given-names: "Christopher W."
+- family-names: "Edwards"
+  given-names: "Christopher S."
+- family-names: "Bandfield"
+  given-names: "Joshua L."
+contact:
+  - affiliation: "Northern Arizona University (NAU)"
+    email: "cjtu@nau.edu"
+    family-names: "Tai Udovicic"
+    given-names: "Christian J."
+title: "Roughness"
+abstract: "Illumination of rough planetary surfaces."
+doi: 10.5281/zenodo.5498089
+license: MIT
+repository-code: "https://github.com/NAU-PIXEL/roughness"
+type: "software"
+url: https://nau-pixel.github.io/roughness/

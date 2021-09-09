@@ -5,6 +5,7 @@
 </div>
 
 <div align="center">
+  <span>
   <!-- PYPI version -->
   <!-- <a href="https://badge.fury.io/py/roughness">
     <img src="https://badge.fury.io/py/roughness.svg"
@@ -15,21 +16,19 @@
     <img src="https://img.shields.io/codecov/c/github/choojs/choo/master.svg?style=flat-square"
       alt="Test Coverage" />
   </a> -->
-
-  <!-- DOI -->
-  <a href="https://zenodo.org/badge/latestdoi/328820617"><img src="https://zenodo.org/badge/328820617.svg" alt="DOI"></a>
-
-  <!-- CI -->
-  <a href="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml/badge.svg" alt="Code Quality and Tests"></a>
-
-  <!-- CI -->
-  <a href="https://nau-pixel.github.io/roughness/"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/docs_publish.yml/badge.svg" alt="Documentation"></a>
-
-  <!-- Code Style -->
-  <a href="https://github.com/psf/black">
-    <img src="https://img.shields.io/badge/code%20style-black-000000.svg"
-      alt="Code Style: Black" />
-      </a>
+  <!-- Zenodo DOI -->
+  <a href="https://zenodo.org/badge/latestdoi/328820617"><img src="https://zenodo.org/badge/328820617.svg" alt="DOI">
+  <!-- Code Quality and Tests -->
+  </a>
+  <a href="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml/badge.svg" alt="Code Quality and Tests">
+  <!-- Docs -->
+  </a>
+  <a href="https://nau-pixel.github.io/roughness/"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/docs_publish.yml/badge.svg" alt="Documentation">
+  <!-- Code Style Black -->
+  </a>
+  <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style: Black" />
+  </a>
+  </span>
 </div>
 
 A python package for predicting the illumination and shadowing conditions on a rough planetary surface.
