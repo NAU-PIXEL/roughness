@@ -141,4 +141,4 @@ dmypy.json
 # Data folder except !items
 /data/*
 !data/__init__.py
-!data/los_lookup_4D.npy
+!data/default_lookup.nc
