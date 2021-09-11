@@ -4,15 +4,15 @@ from . import __version__
 
 # Defaults
 VERSION = __version__
-LUT_NAMES = ("totfacets", "losfacets", "losprob")
-LUT_LONGNAMES = ("No. total facets", "No. LOS facets", "Prob(LOS)")
-LUT_COORDS = ("rms", "inc", "az", "theta")
-LUT_COORD_NAMES = {
-    "rms": "RMS Roughness",
-    "inc": "Incidence Angle",
-    "az": "Facet Azimuth Angle",
-    "theta": "Facet Slope Angle",
-}
+LUT_NAMES = ("total", "los", "prob")
+LUT_LONGNAMES = ("Total facets", "LOS facets", "P(LOS)")
+LUT_DIMS = ("rms", "inc", "az", "theta")
+LUT_DIMS_LONGNAMES = (
+    "RMS Roughness",
+    "Incidence Angle",
+    "Facet Azimuth Angle",
+    "Facet Slope Angle",
+)
 NRMS = 10  # Number of RMS slopes in [0, 50) degrees.
 NINC = 10  # Number of incidence angles in [0, 90) degrees.
 NAZ = 36  # Number of facet azimuth bins in [0, 360) degrees.
@@ -49,6 +49,9 @@ FIG_SLOPE_DIST_HAPKE = FIGURES_DIR / "slope_dist_hapke.png"
 FIG_SLOPE_DIST_GSURF = FIGURES_DIR / "slope_dist_gaussian_surf.png"
 FIG_SLOPE_DIST_VIS_RMS = FIGURES_DIR / "slope_dist_vis_rms.png"
 FIG_SLOPE_DIST_VIS_THETA = FIGURES_DIR / "slope_dist_vis_theta.png"
+
+# Plotting (plot_roughness.py)
+
 
 # Help strings (setup_roughness.py)
 HNRMS = "Number of rms slope bins in [0, 55) deg (default: 10)."

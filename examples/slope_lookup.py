@@ -19,10 +19,10 @@
 # The inputs to the function are:
 #
 # - `rms_slope`: Root-mean-square slope of a Gaussian slope distribution of surface facets
-# - `sun_theta`: To-sun incidence angle w.r.t. the surface
-# - `sun_az`: To-sun azimuth angle w.r.t. the surface
-# - `sc_theta`: To-spacecraft exitance angle w.r.t. the surface
-# - `sc_az`: To-spacecraft azimuth angle w.r.t. the surface
+# - `sun_theta`: To-sun incidence angle w.rn.t. the surface
+# - `sun_az`: To-sun azimuth angle w.rn.t. the surface
+# - `sc_theta`: To-spacecraft exitance angle w.rn.t. the surface
+# - `sc_az`: To-spacecraft azimuth angle w.rn.t. the surface
 # - (optional) `los_lookup_path`: Path to custom 4D los lookup file
 #
 # The default lookup table `los_lookup_4D.npy` predicts shadowing across:
@@ -42,46 +42,54 @@
 # Since the observed shadowing distribution will vary based on the observation direction, the shadow facet table is also projected onto the plane perpendicular to the vector of the viewing direction supplied (`sc_theta`, `sc_az`). For example, at 0 phase angle (spacecraft and sun vectors are the same), all shadows from the point of view of the spacecraft are hidden.
 
 # %%
-import os.path as path
 import numpy as np
 import matplotlib.pyplot as plt
-import roughness as r
+import ipywidgets as ipyw
+from ipywidgets import interact
+from roughness import roughness as rn
 from roughness import helpers as rh
+from roughness import plotting as rp
 
-plt.style.use("dark_background")
+lookup = rn.load_los_lookup()
 
 # %%
-# Get raw los table with solar incidence angle below
+rmss = lookup.rms.values
+incs = lookup.inc.values
+azs = lookup.az.values
+rms_slider = ipyw.IntSlider(20, min=rmss.min(), max=rmss.max(), step=1)
+inc_slider = ipyw.IntSlider(30, min=incs.min(), max=incs.max(), step=1)
+az_slider = ipyw.IntSlider(270, min=azs.min(), max=azs.max(), step=15)
+
+
+@interact
+def plot_shadow_table(rms=rms_slider, inc=inc_slider, az=az_slider):
+    """Plot shadowing conditions at rms, inc, az."""
+    shadow_table = rn.get_shadow_table(rms, inc, az, lookup)
+    ax = rp.plot_slope_az_table(shadow_table, clabel="P(shadowed)")
+    ax.set_title("Fraction of facets shadowed at (slope / az)")
+
+
+# %%
+# Get raw shadow table with solar incidence angle below
 rms_slope = 20
 sun_theta = 60
 sun_az = 270
-ll = r.load_los_lookup()
 
-los_frac = r.get_los_table(rms_slope, sun_theta, sun_az, ll)
-
-plt.imshow(
-    los_frac,
-    extent=(0, 90, 360, 0),
-    aspect=90 / 360,
-    cmap="magma_r",
-    vmin=0,
-)
-plt.title(f"Facet los fraction with RMS={rms_slope}$^o$ inc={sun_theta}$^o$")
-plt.xlabel("Facet slope angle [deg]")
-plt.ylabel("Facet azimuth angle [deg]")
-plt.colorbar(label="P(los)")
+shadow_table = rn.get_shadow_table(rms_slope, sun_theta, sun_az, lookup)
+ax = rp.plot_slope_az_table(shadow_table, clabel="P(shadowed)")
+ax.set_title(f"Facet shadow fraction RMS={rms_slope}$^o$ inc={sun_theta}$^o$")
 
 # %%
 # Sanity check on facet vectors (slope in 0-90, az in 0-360)
-theta_surf, azimuth_surf = rh.get_facet_grids(los_frac)
-cartesian_surf = rh.sph2cart(np.rad2deg(theta_surf), np.rad2deg(azimuth_surf))
+theta_surf, azimuth_surf = rh.get_facet_grids(shadow_table)
+cartesian_surf = rh.sph2cart(np.radians(theta_surf), np.radians(azimuth_surf))
 
 fig = plt.figure()
 ax = plt.axes(projection="3d")
 ax.view_init(45, 60)
 
-nrms, ninc, naz, nslope = ll.shape
-X, Y, Z = cartesian_surf.reshape((nslope * (naz), 3)).T + 1e-8
+nrms, ninc, nslope, naz = lookup.prob.shape
+X, Y, Z = cartesian_surf.reshape((nslope * naz, 3)).T + 1e-8
 O = np.zeros(len(X))  # origin
 
 # Color by az angle
@@ -112,7 +120,7 @@ q = ax.quiver(
 # part should do the view angle correction but... looks weird
 sc_theta = 20
 sc_az = 270
-theta, az = (np.rad2deg(30), np.rad2deg(sc_az))
+theta, az = (np.radians(30), np.radians(sc_az))
 
 cartesian_sc = rh.sph2cart(theta, az)
 cos_surf_sc = np.dot(cartesian_surf, cartesian_sc)
@@ -135,9 +143,9 @@ solar_az = 270
 fig = plt.figure(figsize=(15, 8))
 sun_thetas = (0, 30, 60)
 for i, solar_inc in enumerate(sun_thetas):
-    shadow_table = r.get_shadow_table(rms_slope, solar_inc, solar_az, ll)
+    shadow_table = rn.get_shadow_table(rms_slope, solar_inc, solar_az, lookup)
     ax = fig.add_subplot(1, len(sun_thetas), i + 1, projection="3d")
-    ax.view_init(35, -75)
+    ax.view_init(35, -45)
     ax.plot_surface(
         theta_surf,
         azimuth_surf,
@@ -164,9 +172,9 @@ solar_az = 270
 fig = plt.figure(figsize=(15, 8))
 rms_slopes = (0, 20, 40)
 for i, rms_slope in enumerate(rms_slopes):
-    shadow_table = r.get_shadow_table(rms_slope, solar_inc, solar_az, ll)
+    shadow_table = rn.get_shadow_table(rms_slope, solar_inc, solar_az, lookup)
     ax = fig.add_subplot(1, len(sun_thetas), i + 1, projection="3d")
-    ax.view_init(25, -135)
+    ax.view_init(35, 135)
     ax.plot_surface(
         theta_surf, azimuth_surf, shadow_table, cmap="viridis", vmin=0, vmax=1
     )
@@ -181,3 +189,10 @@ for i, rms_slope in enumerate(rms_slopes):
 # plt.savefig('./shadow_tables.png', dpi=300)
 
 # %%
+# Get probability of certain facets, given rms slope dist
+slope_correction = rn.slope_dist(np.radians(theta_surf), np.radians(rms_slope))
+
+fig = plt.figure()
+ax = plt.axes(projection="3d")
+ax.view_init(45, -75)
+ax.plot_surface(theta_surf, azimuth_surf, slope_correction, cmap="viridis")

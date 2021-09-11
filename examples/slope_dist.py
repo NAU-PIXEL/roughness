@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
+#     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
 #     name: python3
 # ---
 
@@ -25,6 +25,7 @@ from roughness import helpers as rh
 
 plt.style.use("dark_background")
 SAVEFIGS = False
+lookup = rn.load_los_lookup(cfg.FLOOKUP)
 
 # %% [markdown]
 # ## RMS (Shepard 1995)
@@ -75,20 +76,18 @@ if SAVEFIGS:
 # ## Slope distributions from lineofsight lookup tables
 
 # %%
-totalfacets = rn.load_los_lookup(cfg.FTOT_FACETS)
-_, _, _, theta = rh.get_lookup_coords(*totalfacets.shape)
 rms_arr = (5, 10, 20, 30, 40, 50)
 
 plt.figure()
 for rms in rms_arr:
-    facet_table = rn.get_los_table(rms, 0, 270, totalfacets)
+    facet_table = rn.get_los_table(rms, 0, 270, lookup, "total")
     p_theta = np.sum(facet_table, axis=0) / np.nansum(facet_table)
-    plt.plot(theta, p_theta, label=f"RMS$={rms}^o$")
+    plt.plot(facet_table.theta, p_theta, label=f"RMS$={rms}^o$")
 plt.title("Synthetic gaussian surface RMS rough slope distributions")
 plt.ylabel("$P(\\theta)$")
 plt.xlabel("Facet $\\theta$ angle [deg]")
 plt.xlim(0, 90)
-plt.ylim(0, 0.3)
+plt.ylim(0, None)
 plt.legend(ncol=2)
 if SAVEFIGS:
     plt.savefig(cfg.FIG_SLOPE_DIST_GSURF, dpi=300)
@@ -99,8 +98,8 @@ if SAVEFIGS:
 # Viewing azimuth is particularly important for higher RMS values and shows the distinction between syn-facing slopes (surface facets oriented towards the spacecraft) and anti-facing slopes (surface facets orented away from the spacecraft).
 
 # %%
-totalfacets = rn.load_los_lookup(cfg.FTOT_FACETS)
-_, _, azs, theta = rh.get_lookup_coords(*totalfacets.shape)
+azs = lookup.az.values
+theta = lookup.theta.values
 rms_arr = (5, 10, 20, 30, 40, 50)
 sc_theta = 60
 sc_az = 270
@@ -108,8 +107,8 @@ sc_az = 270
 plt.figure()
 for rms in rms_arr:
     # Compute prob of totalfacets being visible from sc_az
-    facet_table = rn.get_los_table(rms, sc_theta, sc_az, totalfacets)
-    view_table = rn.get_view_table(rms, sc_theta, sc_az)
+    facet_table = rn.get_los_table(rms, sc_theta, sc_az, lookup, "total")
+    view_table = rn.get_view_table(rms, sc_theta, sc_az, lookup)
     vis_facet_table = facet_table * view_table
 
     # Get syn facets facing sc_az and anti facets 180 degrees from sc_az
@@ -139,8 +138,8 @@ if SAVEFIGS:
 # Viewing angle (spacecraft emission angle) mainly affects anti-facing slopes (surface facets orented away from the spacecraft), but has little effect on syn-facing slopes (surface facets oriented towards the spacecraft), even at high roughness.
 
 # %%
-totalfacets = rn.load_los_lookup(cfg.FTOT_FACETS)
-_, _, azs, theta = rh.get_lookup_coords(*totalfacets.shape)
+az = lookup.az.values
+theta = lookup.theta.values
 sc_thetas = (0, 15, 30, 45, 60, 75)
 rms = 40
 sc_az = 270
@@ -148,8 +147,8 @@ sc_az = 270
 plt.figure()
 for sc_theta in sc_thetas:
     # Compute prob of totalfacets being visible from sc_az
-    facet_table = rn.get_los_table(rms, sc_theta, sc_az, totalfacets)
-    view_table = rn.get_view_table(rms, sc_theta, sc_az)
+    facet_table = rn.get_los_table(rms, sc_theta, sc_az, lookup, "total")
+    view_table = rn.get_view_table(rms, sc_theta, sc_az, lookup)
     vis_facet_table = facet_table * view_table
 
     # Get syn facets facing sc_az and anti facets 180 degrees from sc_az

@@ -20,9 +20,9 @@ def test_make_los_table_small():
             ]
         ),
     ]
-    np.testing.assert_array_equal(actual["totfacets"].values, expected[0])
-    np.testing.assert_array_equal(actual["losfacets"].values, expected[1])
-    np.testing.assert_array_almost_equal(actual["losprob"].values, expected[2])
+    np.testing.assert_array_equal(actual["total"].values, expected[0])
+    np.testing.assert_array_equal(actual["los"].values, expected[1])
+    np.testing.assert_array_almost_equal(actual["prob"].values, expected[2])
 
 
 def test_make_zsurf():

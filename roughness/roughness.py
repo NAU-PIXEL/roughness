@@ -7,45 +7,6 @@ from . import helpers as rh
 from .config import FLOOKUP, AZ0
 
 
-def get_table_xarr(params, dims=None, da="losprob", los_lookup=FLOOKUP):
-    """
-    Return interpolated xarray.DataArray of los_lookup table at given params.
-
-    Parameters
-    ----------
-    params (list): List of values to query in los_lookup.
-    dims (list of str): Dimensions name of each param (default: index order).
-    da (str): DataArray in xarray.DataSet to query (default: losprob)
-    los_lookup (path or xarray): Path to file or los lookup array.
-
-    Returns
-    -------
-    table (xarray.DataArray): Table of los_lookup values
-    """
-    # Load los_lookup
-    if not isinstance(los_lookup, (xr.Dataset, xr.DataArray)):
-        los_lookup = load_los_lookup(los_lookup)
-
-    # Get desired DataArray from los_lookup DataSet
-    if isinstance(los_lookup, xr.Dataset):
-        los_lookup = los_lookup[da]
-
-    # Get table dimensions
-    if dims is None:
-        dims = list(los_lookup.dims)
-
-    # Get table coordinates
-    coords = {dims[i]: params[i] for i in range(len(params))}
-
-    # Rotate los_lookup to target azimuth
-    if "az" in coords:
-        los_lookup = rotate_az_lookup(los_lookup, coords["az"])
-
-    # Get table values
-    table = los_lookup.interp(coords, method="linear")
-    return table
-
-
 def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     """
     Return probability that each facet is in shadow given (sun_that, sun_az)
@@ -63,8 +24,7 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     shadow_prob (2D array): Shadow probability table (dims: az, theta)
     """
     # Invert to get P(shadowed) since los_lookup defaults to P(illuminated)
-    shadow_table = 1 - get_los_table(rms, sun_theta, sun_az, los_lookup)
-    return shadow_table
+    return 1 - get_los_table(rms, sun_theta, sun_az, los_lookup, "prob")
 
 
 def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
@@ -83,17 +43,32 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
     -------
     view_prob (2D array): View probability table (dims: az, theta)
     """
-    view_table = get_los_table(rms, sc_theta, sc_az, los_lookup)
-
-    # Normalize to get overall probability of each facet being observed
-    view_table /= np.nansum(view_table)
-    return view_table
+    return get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
 
 
-def get_los_table(rms, inc, az=270, los_lookup=FLOOKUP):
+def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
+    """
+    Return the weighted probability of each facet occurring given an rms rough
+    surface facets in the line of sight of (theta, az).
+
+    Parameters
+    ----------
+    rms (num): Root-mean-square surface theta describing roughness [deg]
+    inc (num or array): Inclination angle [deg]
+    los_lookup (path or xarray): Los lookup xarray or path to file.
+
+    Returns
+    -------
+    weights (2D array): Weighted probability table that sums to 1.
+    """
+    tot = get_table_xarr([rms, inc], ["rms", "inc"], "total", los_lookup)
+    return tot / np.nansum(tot)
+
+
+def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):
     """
     Return 2D line of sight probability table of rms rough surface facets in
-    the line of sight of (theta, az).
+    the line of sight of (inc, az).
 
     Output los_table is interpolated from ray-casting derived los_lookup.
     See make_los_table.py to produce a compatible los_lookup file.
@@ -103,58 +78,58 @@ def get_los_table(rms, inc, az=270, los_lookup=FLOOKUP):
     rms (num): Root-mean-square surface theta describing roughness [deg]
     inc (num or array): Inclination angle [deg]
     az (num or array): Azimuth [deg]
-    los_lookup (path or 4D array): Los lookup (dims: rms, cinc, az, theta)
+    los_lookup (path or xarray): Los lookup xarray or path to file.
+    da (str): DataArray to query ['total', 'los', 'prob'] (default: prob)
 
     Returns
     -------
     los_table (2D array): Line of sight probability table (dims: az, theta)
     """
-    # If los_lookup is a path, load it
-    try:
-        _ = los_lookup.shape
-    except AttributeError:
-        los_lookup = load_los_lookup(los_lookup)
-    # Interpolate nearest values in lookup to (rms, cinc)
-    rms_slopes, incs, azs, _ = rh.get_lookup_coords(*los_lookup.shape)
-    rms_table = interp_lookup(rms, rms_slopes, los_lookup)
-    inc_table = interp_lookup(inc, incs, rms_table)
-
-    # Rotate table from az=270 to az
-    los_table = rotate_az_lookup(inc_table, az, azs)
+    # Format rms and inc to pass to get_table_xarr
+    los_table = get_table_xarr((rms, inc), ("rms", "inc"), az, da, los_lookup)
     return los_table
 
 
-def interp_lookup(xvalue, xcoords, values):
+def get_table_xarr(params, dims=None, az=None, da="prob", los_lookup=FLOOKUP):
     """
-    Return values array interpolated on first axis to xvalue, given xcoords.
-
-    Uses linear interpolation, reduces the dimensionality of values by 1.
-    The first axis of values must be the same length as xcoords.
+    Return interpolated xarray.DataArray of los_lookup table at given params.
 
     Parameters
     ----------
-    xvalue (num): X-coordinate at which to interpolate.
-    xcoords (1D array): Array of X-coordinates of the first dim of values.
-    values (ndarray): Array of values to interpolate.
+    params (list): List of values to query in los_lookup.
+    dims (list of str): Dimensions name of each param (default: index order).
+    az (num): Azimuth of observation to query (default: az0).
+    da (str): DataArray in xarray.DataSet to query (default: prob)
+    los_lookup (path or xarray): Path to file or los lookup array.
 
     Returns
     -------
-    interp_values ((n-1)darray): Values[x] (interpolated if necessary)
+    table (xarray.DataArray): Table of los_lookup values
     """
-    # If x outside arr range, use closest edge value
-    if xvalue <= xcoords[0]:
-        return values[0]
-    if xvalue >= xcoords[-1]:
-        return values[-1]
+    if isinstance(los_lookup, np.ndarray):
+        los_lookup = rh.np2xr(los_lookup)
+        print(type(los_lookup))
 
-    # Find nearest indices
-    i_right = np.searchsorted(xcoords, xvalue)
-    i_left = i_right - 1
+    # Load los_lookup if necessary and get desired DataArray
+    if not isinstance(los_lookup, (xr.Dataset, xr.DataArray)):
+        los_lookup = load_los_lookup(los_lookup)
+    if isinstance(los_lookup, xr.Dataset):
+        los_lookup = los_lookup[da]
 
-    # Find relative distance and interpolate
-    dist = (xvalue - xcoords[i_left]) / (xcoords[i_right] - xcoords[i_left])
-    interp_values = (1 - dist) * values[i_left] + dist * values[i_right]
-    return interp_values
+    # Get table dimensions if not named
+    if dims is None:
+        dims = list(los_lookup.dims)
+
+    # Get table coordinates
+    coords = {dims[i]: params[i] for i in range(len(params))}
+
+    # Rotate los_lookup to target azimuth (else leave in terms of az0)
+    if az is not None:
+        los_lookup = rotate_az_lookup(los_lookup, az)
+
+    # Get table values
+    table = los_lookup.interp(coords, method="linear")
+    return table
 
 
 def rotate_az_lookup(los_table, target_az, az0=None):
@@ -230,7 +205,7 @@ def load_los_lookup(path=FLOOKUP):
 
     Parameters
     ----------
-    path (optional: str): Path to los lookup file containing 4D numpy array
+    path (optional: str): Path to los lookup file containing xarray.Dataset
 
     Returns
     -------

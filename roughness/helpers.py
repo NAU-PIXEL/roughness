@@ -10,7 +10,7 @@ from . import config as cfg
 from . import __version__
 
 # Line of sight helpers
-def lookup2xarray(lookups, nrms, ninc, naz, ntheta):
+def lookup2xarray(lookups):
     """
     Convert list of default lookups to xarray.DataSet.
 
@@ -24,22 +24,55 @@ def lookup2xarray(lookups, nrms, ninc, naz, ntheta):
     """
     names = cfg.LUT_NAMES
     longnames = cfg.LUT_LONGNAMES
-    coords = get_lookup_coords(nrms, ninc, naz, ntheta)
-    coords_xr = list(zip(cfg.LUT_COORDS, coords))
-    coord_names = cfg.LUT_COORD_NAMES
     for i, lut in enumerate(lookups):
         # Make DataArray
-        da = xr.DataArray(lut, coords=coords_xr, name=names[i])
+        da = np2xr(lut, name=names[i])
         da.attrs["long_name"] = longnames[i]
-        for coord in da.coords:
-            da.coords[coord].attrs["long_name"] = coord_names[coord]
-            da.coords[coord].attrs["units"] = "deg"
+
         # Add DataArray to DataSet
         if i == 0:
             ds = da.to_dataset()
         else:
             ds[names[i]] = da
     return ds
+
+
+def np2xr(arr, dims=None, coords=None, name=None, cnames=None, cunits=None):
+    """
+    Convert numpy array to xarray.DataArray.
+
+    Parameters
+    ----------
+    array (np.array): Numpy array to convert to xarray.DataArray.
+    dims (list of str): Dimensions name of each param (default: index order).
+    coords (list of arr): Coordinate arrays of each dim.
+    name (str): Name of xarray.DataArray (default: None)
+    cnames (list of str): Coordinate names of each param.
+    cunits (list of str): Coordinate units of each param (default: deg).
+
+    Returns
+    -------
+    xarray.DataArray
+    """
+    ndims = len(arr.shape)
+    if dims is None:
+        dims = cfg.LUT_DIMS[:ndims]
+    if coords is None:
+        coords = get_lookup_coords(*arr.shape)[:ndims]
+    if cnames is None:
+        cnames = cfg.LUT_DIMS_LONGNAMES[:ndims]
+    if cunits is None:
+        cunits = ["deg"] * ndims
+
+    # Make xarray-readable (dim, coord) pairs
+    coords_xr = list(zip(dims, coords))
+
+    # Make DataArray
+    da = xr.DataArray(arr, coords=coords_xr, name=name)
+    for i, coord in enumerate(da.coords):
+        da.coords[coord].attrs["long_name"] = cnames[i]
+        da.coords[coord].attrs["units"] = cunits[i]
+    return da
 
 
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):

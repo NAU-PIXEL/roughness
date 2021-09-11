@@ -124,10 +124,10 @@ def make_los_table(
 
     # Convert lookups to xarray
     lookups = (tot_facets, los_facets, los_lookup)
-    ds = rh.lookup2xarray(lookups, nrms, ninc, naz, ntheta)
-    ds.attrs["description"] = "Roughness line of sight lookup tables."
+    ds = rh.lookup2xarray(lookups)
+    ds.attrs["description"] = "Roughness line of sight lookup DataSet."
     ds.attrs["version"] = VERSION
-    ds.attrs["demsize"] = 10000
+    ds.attrs["demsize"] = demsize
     ds.attrs["threshold"] = threshold
     ds.attrs["az0"] = az0
     if write:
