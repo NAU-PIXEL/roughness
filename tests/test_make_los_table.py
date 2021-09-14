@@ -1,8 +1,13 @@
 """Test make_los_table.py"""
+import sys
 import numpy as np
+import pytest
 import roughness.make_los_table as mlt
 
 
+@pytest.mark.skipif(
+    "linux" not in sys.platform, reason="Raytrace onlycompiles on Linux"
+)
 def test_make_los_table_small():
     """Test make_los_table()."""
     rms_inc_az_theta = (2, 2, 1, 2)

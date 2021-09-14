@@ -321,12 +321,19 @@ def compile_lineofsight(los_f90=cfg.FLOS_F90, verbose=False):
 def import_lineofsight(fortran_dir=cfg.FORTRAN_DIR):
     """Import lineofsight module. Compile first if not found."""
     # pragma pylint: disable=import-outside-toplevel
+    lineofsight = None
     with change_working_directory(fortran_dir):
         try:
             from .fortran import lineofsight
         except (ImportError, ModuleNotFoundError):
-            compile_lineofsight()
-            from .fortran import lineofsight
+            try:
+                compile_lineofsight()
+                from .fortran import lineofsight
+            except (ImportError, ModuleNotFoundError):
+                msg = "Cannot compile lineofsight FORTRAN module. Please \
+                       ensure you have a F90 compatible Fortran compiler (e.g.\
+                       gfortran) installed."
+                print(msg)
     return lineofsight
 
 
