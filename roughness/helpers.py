@@ -75,6 +75,22 @@ def np2xr(arr, dims=None, coords=None, name=None, cnames=None, cunits=None):
     return da
 
 
+def wl2xr(arr, units="microns"):
+    """Return wavelength numpy array as xarray."""
+    da = xr.DataArray(arr, coords=[("wavelength", arr)])
+    da.coords["wavelength"].attrs["long_name"] = "Wavelength"
+    da.coords["wavelength"].attrs["units"] = units
+    return da
+
+
+def wn2xr(arr, units="cm^-1"):
+    """Return wavenumber numpy array as xarray."""
+    da = xr.DataArray(arr, coords=[("wavenumber", arr)])
+    da.coords["wavelength"].attrs["long_name"] = "Wavenumber"
+    da.coords["wavelength"].attrs["units"] = units
+    return da
+
+
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
     """
     Return coordinate arrays corresponding to number of elements in each axis.
@@ -97,7 +113,7 @@ def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
     rms_coords = np.linspace(0, 50, nrms, endpoint=False)
-    cinc_coords = np.linspace(1, 0, ninc, endpoint=False)  # [0, 90) degrees
+    cinc_coords = np.linspace(1, 0, ninc, endpoint=True)  # [0, 90) degrees
     azim_coords = np.linspace(0, 360, naz, endpoint=False)
     slope_coords = np.linspace(0, 90, ntheta, endpoint=False)
     inc_coords = np.rad2deg(np.arccos(cinc_coords))
@@ -395,7 +411,49 @@ def get_local_az(ground, sun, sc):
     return az
 
 
+def inc_to_tloc(inc, az):
+    """
+    Convert solar incidence and az to decimal local time (in 6-18h).
+
+    Parameters
+    ----------
+    inc: (float)
+        Solar incidence in degrees (0, 90)
+    az: (str)
+        Solar azimuth in degrees (0, 360)
+    """
+    inc = inc.copy()
+    if isinstance(az, np.ndarray):
+        inc[az < 180] *= -1
+    elif az < 180:
+        inc *= -1
+    coinc = 90 + inc  # (-90, 90) -> (0, 180)
+    tloc = 6 * coinc / 90 + 6  # (0, 180) -> (6, 18)
+    return tloc
+
+
+def tloc_to_inc(tloc):
+    """
+    Convert decimal local time to solar incidence (equator only).
+    """
+    coinc = (tloc - 6) * 90 / 6  # (6, 18) -> (0, 180)
+    inc = coinc - 90  # (0, 180) -> (-90, 90)
+    return inc
+
+
 # Linear algebra
+# def element_az_elev(v1, v2):
+#     """
+#     Return azimuth and elevation of v2 relative to v1.
+#
+#    untested
+#     """
+#     v = v2 - v1
+#     az = np.degrees(np.arctan2(v[:, :, 0], v[:, :, 1]))
+#     elev = np.degrees(np.arctan2(v[:, :, 2], np.sqrt(v[:, :, 0]** 2 + v[:, :, 1]**2)))
+#     return az, elev
+
+
 def element_cross(A, B):
     """
     Return element-wise cross product of two 3D arrays in cartesian coords.
@@ -491,3 +549,10 @@ def sph2cart(theta, phi, radius=1):
             radius * np.cos(theta),
         ]
     ).squeeze()
+
+
+def xy2lonlat_coords(x, y, extent):
+    """Convert x,y coordinates to lat,lon coordinates."""
+    lon = np.linspace(extent[0], extent[1], len(x))
+    lat = np.linspace(extent[3], extent[2], len(y))
+    return lon, lat

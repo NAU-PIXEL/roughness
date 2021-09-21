@@ -1,10 +1,131 @@
-"""Compute rough emission assuming radiative equillibrium."""
+"""Compute rough emission curves."""
 import warnings
 import numpy as np
 import xarray as xr
 import roughness.helpers as rh
 import roughness.roughness as rn
-from roughness.config import SB, SC
+from roughness.config import SB, SC, CCM, KB, HC, TLOOKUP
+
+
+def rough_emission_lookup(
+    geom, wls, rms, albedo, lat, tloc, rerad=True, flookup=None, tlookup=None
+):
+    """
+    Return rough emission spectrum given geom and params to tlookup.
+
+    Parameters
+    ----------
+    geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
+    wls (arr): Wavelengths [microns]
+    rms (arr): RMS roughness [degrees]
+    albedo (num): Hemispherical broadband albedo
+    lat (num): Latitude [degrees]
+    tloc (num): Local time past midnight [hours]
+    rerad (bool): If True, include re-radiation from adjacent facets
+    flookup (path or xarray): Facet lookup xarray or path to file.
+    tlookup (path or xarray): Temperature lookup xarray or path to file.
+    """
+    # if date is not None:
+    #     date = pd.to_datetime(date)
+    sun_theta, sun_az, sc_theta, sc_az = geom
+    if isinstance(wls, np.ndarray):
+        wls = rh.wl2xr(wls)
+
+    # Query los and temperature lookup tables
+    shadow_table = rn.get_shadow_table(rms, sun_theta, sun_az, flookup)
+
+    # Get illum and shadowed facet temperatures
+    temp_illum = get_temp_table(tloc, albedo, lat, tlookup).interp_like(
+        shadow_table
+    )
+    temp_shade = get_shadow_temp_table(tloc, albedo, lat, tlookup).interp_like(
+        shadow_table
+    )
+
+    # Compute 2 component emission of illuminated and shadowed facets
+    emission_table = emission_2component(
+        wls, temp_illum, temp_shade, shadow_table
+    )
+
+    if rerad:
+        emission_table += get_reradiation_lookup(emission_table, albedo)
+
+    # Weight each facet by its probability of being observed (sc theta, az)
+    view_weights = rn.get_view_table(rms, sc_theta, sc_az, flookup)
+    emission_table *= view_weights
+
+    # Weight each facet by its probability of occurrance
+    if sun_theta > 1e-4:  # TODO: figure out weighting at sun_theta = 0
+        facet_weights = rn.get_facet_weights(rms, sun_theta, flookup)
+        rough_emission = emission_spectrum(emission_table, facet_weights)
+    else:
+        emission0 = emission_table.sel(theta=slice(0, 0.1))
+        rough_emission = emission_spectrum(emission0)
+
+    return rough_emission
+
+
+def infer_shadow_temp(temp_illum):
+    """Return shadow temp as coldest temp existing in temp_table."""
+    return temp_illum.min().values
+
+
+def get_shadow_temp_table(tloc, albedo, lat, tlookup=None):
+    """
+    Return shadow temperature as pre-dawn / post-sunset values for each facet.
+
+    Parameters
+    ----------
+    tloc (num): Local time past midnight [hours].
+    albedo (num): Local albedo.
+    lat (num): Latitude [degrees].
+    tlookup (path or xarray): Temperature lookup xarray or path to file.
+    """
+    # Shadows can be no colder than coldest temp that exists
+
+    # Set to temp table for pre-dawn / post-sunset
+    if tloc > 12:
+        tnight = 18.5  # Post-sunset temperature
+    else:
+        tnight = 5.5  # Pre-sunrise temperature
+    shadow_table = get_temp_table(tnight, albedo, lat, tlookup)
+    return shadow_table
+
+
+def get_temp_table(tloc, albedo, lat, tlookup=None):
+    """
+    Return 2D temperature table of surface facets (inc, az).
+
+    Parameters
+    ----------
+    date (str): Observation date (parsable with pandas.to_datetime).
+    tloc (num): Local time past midnight [hours].
+    albedo (num): Local albedo.
+    lat (num): Latitude [degrees].
+    los_lookup (path or xarray): Los lookup xarray or path to file.
+
+    Returns
+    -------
+    temp_table (2D array): Facet temperatures (dims: az, theta)
+    """
+    if tlookup is None:
+        tlookup = TLOOKUP
+    params = [tloc, albedo, lat]
+    coords = ["tloc", "albedo", "lat"]
+    # if date is not None:
+    #     params.append(pd.to_datetime(date))
+    #     # TODO : remove next 3 lines when xarray gdate is fixed
+    #     tlookup = xr.open_dataarray(tlookup)
+    #     tlookup["gdate"] = pd.DatetimeIndex(
+    #         tlookup["gdate"].values
+    #     ).sort_values()
+    #     tlookup = tlookup.sortby("gdate")
+    #     coords.append("gdate")
+
+    temp_table = rn.get_table_xarr(
+        params, coords, da="tsurf", los_lookup=tlookup
+    )
+    return temp_table
 
 
 def rough_emission_eq(
@@ -31,30 +152,17 @@ def rough_emission_eq(
     rough_emission (arr): Emission spectrum vs. wls [W m^-2]
     """
     sun_theta, sun_az, sc_theta, sc_az = geom
+    if isinstance(wls, np.ndarray):
+        wls = rh.np2xr(wls, "wavelength", [wls])
     # If no roughness, return isothermal emission
     if rms == 0:
         return bb_emission_eq(sun_theta, wls, albedo, emiss, solar_dist)
 
     # Select shadow table based on rms, solar incidence and az
     shadow_table = rn.get_shadow_table(rms, sun_theta, sun_az, flookup)
-
-    # Produce sloped facets at same resolution as shadow_table
-    f_theta, f_az = rh.facet_grids(shadow_table)
-    cinc = cos_facet_sun_inc(f_theta, f_az, sun_theta, sun_az)
-
-    # Compute total radiance of sunlit facets assuming radiative eq
-    facet_inc = np.degrees(np.arccos(cinc))
-    albedo_array = get_albedo_scaling(facet_inc, albedo)
-    rad_illum = get_emission_eq(cinc, albedo_array, emiss, solar_dist)
-    if rerad:
-        rad0 = rad_illum[0, 0]  # Radiance of level surface facet
-        alb0 = albedo_array[0, 0]  # Albedo of level surface facet
-        rad_illum += get_reradiation(
-            cinc, f_theta, albedo, emiss, solar_dist, rad0, alb0
-        )
-
-    # Convert to temperature with Stefan-Boltzmann law
-    temp_illum = get_temp_sb(rad_illum)
+    temp_illum = get_facet_temp_illum_eq(
+        shadow_table, sun_theta, sun_az, albedo, emiss, solar_dist, rerad=rerad
+    )
 
     # Compute temperatures for shadowed facets (JB approximation)
     temp0 = temp_illum[0, 0]  # Temperature of level surface facet
@@ -74,6 +182,29 @@ def rough_emission_eq(
 
     rough_emission = emission_spectrum(emission_table, weight_table)
     return rough_emission
+
+
+def get_facet_temp_illum_eq(
+    shadow_table, sun_theta, sun_az, albedo, emiss, solar_dist, rerad=True
+):
+    """Return temperatures of illuminated facets assuming rad eq"""
+    # Produce sloped facets at same resolution as shadow_table
+    f_theta, f_az = rh.facet_grids(shadow_table)
+    cinc = cos_facet_sun_inc(f_theta, f_az, sun_theta, sun_az)
+    facet_inc = np.degrees(np.arccos(cinc))
+    albedo_array = get_albedo_scaling(facet_inc, albedo)
+    # Compute total radiance of sunlit facets assuming radiative eq
+    rad_illum = get_emission_eq(cinc, albedo_array, emiss, solar_dist)
+    if rerad:
+        rad0 = rad_illum[0, 0]  # Radiance of level surface facet
+        alb0 = albedo_array[0, 0]  # Albedo of level surface facet
+        rad_illum += get_reradiation(
+            cinc, f_theta, albedo, emiss, solar_dist, rad0, alb0
+        )
+
+    # Convert to temperature with Stefan-Boltzmann law
+    facet_temp_illum = get_temp_sb(rad_illum)
+    return facet_temp_illum
 
 
 def bb_emission_eq(sun_theta, wls, albedo, emiss, solar_dist):
@@ -97,7 +228,7 @@ def bb_emission_eq(sun_theta, wls, albedo, emiss, solar_dist):
     albedo_array = get_albedo_scaling(sun_theta, albedo)
     rad_isot = get_emission_eq(cinc, albedo_array, emiss, solar_dist)
     temp_isot = get_temp_sb(rad_isot)
-    bb_emission = bbrw(wls, temp_isot)
+    bb_emission = cmrad2mrad(bbrw(wls, temp_isot))
     return bb_emission
 
 
@@ -167,17 +298,22 @@ def get_albedo_scaling(inc, albedo=0.12, a=None, b=None, mode="vasavada"):
     return alb_scaled
 
 
-def emission_spectrum(rad_table, weight_table=1):
+def emission_spectrum(emission_table, weight_table=None):
     """
-    Return emission spectrum as weighted sum of facets in rad_table.
+    Return emission spectrum as weighted sum of facets in emission_table.
 
     Parameters
     ----------
     rad_table (xr.DataArray): Table of radiance at each facet
     flookup (str): Table of facet weights
     """
-    weighted = rad_table * weight_table
-    if isinstance(rad_table, xr.DataArray):
+    if weight_table is None and isinstance(emission_table, xr.DataArray):
+        weight_table = 1 / (len(emission_table.az) * len(emission_table.theta))
+    elif weight_table is None:
+        weight_table = 1 / np.prod(emission_table.shape[:2])
+
+    weighted = emission_table * weight_table
+    if isinstance(emission_table, xr.DataArray):
         spectrum = weighted.sum(dim=("az", "theta"))
     else:
         spectrum = np.sum(weighted, axis=(0, 1))
@@ -200,6 +336,19 @@ def get_emission_eq(cinc, albedo, emissivity, solar_dist):
     if isinstance(cinc, xr.DataArray):
         rad_eq.name = "Radiance [W m^-2]"
     return rad_eq
+
+
+def get_reradiation_lookup(rad_table, albedo=0.12):
+    """
+    Return emission incident on surf_theta from re-radiating adjacent level
+    surfaces using lookup table. Modified from JB downwelling approximation.
+
+    TODO: Add albedo scaling for rerad slopes
+
+    """
+    rad_table = rn.rotate_az_lookup(rad_table, target_az=180, az0=0)
+    rad_table *= (rad_table.theta / 180).values * albedo
+    return rad_table
 
 
 def get_reradiation(
@@ -272,7 +421,9 @@ def get_shadow_temp(sun_theta, sun_az, temp0):
     return float(shadow_temp)
 
 
-def emission_2component(wavelength, temp_illum, temp_shadow, shadow_table):
+def emission_2component(
+    wavelength, temp_illum, temp_shadow, shadow_table, rerad=True
+):
     """
     Return roughness emission spectrum at given wls given the temperature
     of illuminated and shadowed surfaces and fraction of the surface in shadow.
@@ -284,11 +435,14 @@ def emission_2component(wavelength, temp_illum, temp_shadow, shadow_table):
     temp_shade (num or arr): Temperature(s) of shadowed fraction of surface
     shadow_table (num or arr): Proportion(s) of surface in shadow
     """
-    rad_illum = bbrw(wavelength, temp_illum)
-    rad_shade = bbrw(wavelength, temp_shadow)
+    rad_illum = bbrw(wavelength, temp_illum) * (1 - shadow_table)
+    rad_shade = bbrw(wavelength, temp_shadow) * shadow_table
 
-    rad_total = (1 - shadow_table) * rad_illum + shadow_table * rad_shade
-    return rad_total
+    rad_total = rad_illum + rad_shade
+    if rerad:
+        # TODO: implement
+        pass
+    return cmrad2mrad(rad_total)
 
 
 def get_solar_irradiance(solar_spec, solar_dist):
@@ -298,7 +452,7 @@ def get_solar_irradiance(solar_spec, solar_dist):
 
     Parameters
     ----------
-    solar_spec (arr): Solar spectrum
+    solar_spec (arr): Solar spectrum [W m^-2 um^-1] at 1 au
     solar_dist (num): Solar distance (au)
     """
     return solar_spec / (solar_dist ** 2 * np.pi)
@@ -312,15 +466,49 @@ def get_rad_factor(rad, emission, solar_irr, emissivity=None):
 
     Parameters
     ----------
-    rad (num or arr): Observed radiance [W m^-2]
-    emission (num or arr): Emission to remove from observed radiance
-    solar_irr (num or arr): Solar irradiance
+    rad (num or arr): Observed radiance [W m^-2 um^-1]
+    emission (num or arr): Emission to remove from rad [W m^-2 um^-1]
+    solar_irr (num or arr): Solar irradiance [W m^-2 um^-1]
     emissivity (num or arr): Emissivity (if None, assume Kirchoff)
     """
     if emissivity is None:
         # Assume Kirchoff's Law to compute emissivity
         emissivity = (rad - solar_irr) / (emission - solar_irr)
     return (rad - emissivity * emission) / solar_irr
+
+
+def bbr(wavenumber, temp, radunits="wn"):
+    """
+    Return blackbody radiance at given wavenumber(s) and temp(s).
+
+    Units='wn' for wavenumber: W/(m^2 sr cm^-1)
+          'wl' for wavelength: W/(m^2 sr um)
+
+    Translated from ff_bbr.c in davinci_2.22.
+
+    Parameters
+    ----------
+    wavenumber (num or arr): Wavenumber(s) to compute radiance at [cm^-1]
+    temp (num or arr): Temperatue(s) to compute radiance at [K]
+    radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
+    """
+    # Derive Planck radiation constants a and b from h, c, Kb
+    a = 2 * HC * CCM ** 2  # [J cm^2 / s] = [W cm^2]
+    b = HC * CCM / KB  # [cm K]
+
+    if isinstance(temp, (float, int)):
+        if temp <= 0:
+            temp = 1
+    elif isinstance(temp, xr.DataArray):
+        temp = temp.clip(min=1)
+    else:
+        temp[temp < 0] = 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        rad = (a * wavenumber ** 3) / (np.exp(b * wavenumber / temp) - 1.0)
+        if radunits == "wl":
+            rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr um)]
+    return rad
 
 
 def bbrw(wavelength, temp):
@@ -335,69 +523,28 @@ def bbrw(wavelength, temp):
     return bbr(wl2wn(wavelength), temp, "wl")
 
 
-def bbr(wavenumber, temp, radunits="wn"):
-    """
-    Return blackbody radiance at given wavenumber(s) and temp(s).
-
-    Units='wn' for wavenumber: W/(cm^2 sr cm^-1)
-          'wl' for wavelength: W/(cm^2 sr um)
-
-    Translated from ff_bbr.c in davinci_2.22.
-
-    Parameters
-    ----------
-    wavenumber (num or arr): Wavenumber(s) to compute radiance at [cm^-1]
-    temp (num or arr): Temperatue(s) to compute radiance at [K]
-    radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
-    """
-    a = 2 * 6.6260755e-34 * 2.99792458e10 * 2.99792458e10
-    b = 1.43879
-
-    if isinstance(temp, (float, int)):
-        if temp <= 0:
-            temp = 1
-    elif isinstance(temp, xr.DataArray):
-        temp = temp.clip(min=1)
-    else:
-        temp[temp < 0] = 1
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        rad = (a * wavenumber ** 3) / (np.exp(b * wavenumber / temp) - 1.0)
-        if radunits == "wl":
-            rad = wnrad2wlrad(wavenumber, rad)
-    return rad
-
-
 def btemp(wavenumber, radiance, radunits="wn"):
     """
-    Return brightness temperature from wavenumber and radiance.
+    Return brightness temperature [K] from wavenumber and radiance.
 
     Translated from ff_bbr.c in davinci_2.22.
     """
-    c1 = 2.0 * 6.6260755e-34 * 2.99792458e10 * 2.99792458e10
-    c2 = 1.43879
-
+    # Derive Planck radiation constants a and b from h, c, Kb
+    a = 2 * HC * CCM ** 2  # [J cm^2 / s] = [W cm^2]
+    b = HC * CCM / KB  # [cm K]
     if radunits == "wl":
+        # [W/(cm^2 sr um)] -> [W/(cm^2 sr cm^-1)]
         radiance = wlrad2wnrad(wn2wl(wavenumber), radiance)
-
-    T = (c2 * wavenumber) / np.log(1.0 + (c1 * wavenumber ** 3 / radiance))
+    T = (b * wavenumber) / np.log(1.0 + (a * wavenumber ** 3 / radiance))
     return T
 
 
 def btempw(wavelength, radiance, radunits="wl"):
     """
-    Return brightness temperature from wavelength and radiance.
+    Return brightness temperature [K] at wavelength given radiance.
 
-    Translated from thermis_science.dvrc in davinci_2.22.
     """
-    c1 = 1.1911e4  # W cm^-2 micron^4 str^-1
-    c2 = 1.43879e4  # micron K
-
-    if radunits == "wn":
-        radiance = wnrad2wlrad(wl2wn(wavelength), radiance)
-
-    T = c2 / (wavelength * np.log((c1 / ((wavelength ** 5) * radiance)) + 1))
-    return T
+    return btemp(wl2wn(wavelength), radiance, radunits=radunits)
 
 
 def wnrad2wlrad(wavenumber, rad):
@@ -431,3 +578,13 @@ def wn2wl(wavenumber):
 def wl2wn(wavelength):
     """Convert wavelength (um) to wavenumber (cm-1)."""
     return 10000 / wavelength
+
+
+def cmrad2mrad(cmrad):
+    """Convert radiance from units W/(cm2 sr cm-1) to W/(m2 sr cm-1)."""
+    return cmrad * 1e4  # [W/(cm^2 sr um)] -> [W/(m^2 sr um)]
+
+
+def mrad2cmrad(mrad):
+    """Convert radiance from units W/(m2 sr cm-1) to W/(cm2 sr cm-1)."""
+    return mrad * 1e-4  # [W/(m^2 sr um)] -> [W/(cm^2 sr um)]
