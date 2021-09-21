@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
+#     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
 #     name: python3
 # ---
 
@@ -81,7 +81,7 @@ ax.set_title(f"Facet shadow fraction RMS={rms_slope}$^o$ inc={sun_theta}$^o$")
 
 # %%
 # Sanity check on facet vectors (slope in 0-90, az in 0-360)
-theta_surf, azimuth_surf = rh.get_facet_grids(shadow_table)
+theta_surf, azimuth_surf = rh.facet_grids(shadow_table)
 cartesian_surf = rh.sph2cart(np.radians(theta_surf), np.radians(azimuth_surf))
 
 fig = plt.figure()

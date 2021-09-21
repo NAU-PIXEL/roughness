@@ -2,7 +2,7 @@
 
 [tool.poetry]
 name = "roughness"
-version = "0.5.0-alpha.0"
+version = "0.6.0-alpha.0"
 homepage = "https://github.com/NAU-PIXEL/roughness"
 description = "Predict illumination of planetary surfaces accounting for roughness."
 authors = ["Christian J. Tai Udovicic <cj.taiudovicic@gmail.com>"]

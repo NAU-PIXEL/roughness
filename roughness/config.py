@@ -2,6 +2,10 @@
 from pathlib import Path
 from . import __version__
 
+# Constants
+SC = 1360  # Solar constant at 1 au [W/m^2]
+SB = 5.6703271e-8  # Stephan Boltzmann constant [W m^-2 K^-4]
+
 # Defaults
 VERSION = __version__
 LUT_NAMES = ("total", "los", "prob")

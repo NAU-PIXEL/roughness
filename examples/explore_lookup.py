@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
+#     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
 #     name: python3
 # ---
 
