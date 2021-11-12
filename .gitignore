@@ -136,9 +136,10 @@ dmypy.json
 *.hdf
 
 # Local testing
-/tmp
+tmp/
 
 # Data folder except !items
 /data/*
 !data/__init__.py
 !data/default_lookup.nc
+!data/m3

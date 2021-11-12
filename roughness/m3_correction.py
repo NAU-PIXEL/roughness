@@ -2,403 +2,94 @@
 import time
 import os.path as op
 import numpy as np
+import pandas as pd
+import xarray as xr
+import rasterio as rio
 import roughness.emission as re
 import roughness.helpers as rh
+from roughness.config import M3GWL as GWL
+from roughness.config import M3TWL as TWL
+from roughness.config import FLOOKUP, FALBEDO, TLOOKUP
 
 # Constants
 PATH = "/work/ctaiudovicic/data/"
 M3PATH = f"{PATH}m3/"
 M3ANCPATH = f"{PATH}M3_ancillary_files/"
 M3ALTPHOTOM = f"{PATH}M3_ancillary_files/alt_photom_tables/"
-SHADOW_LOOKUP = f"{PATH}shade_lookup_4D.npy"
-
-# M3 channel wavelengths
-GWL = (
-    460.99,
-    500.92,
-    540.84,
-    580.76,
-    620.69,
-    660.61,
-    700.54,
-    730.48,
-    750.44,
-    770.40,
-    790.37,
-    810.33,
-    830.29,
-    850.25,
-    870.21,
-    890.17,
-    910.14,
-    930.10,
-    950.06,
-    970.02,
-    989.98,
-    1009.95,
-    1029.91,
-    1049.87,
-    1069.83,
-    1089.79,
-    1109.76,
-    1129.72,
-    1149.68,
-    1169.64,
-    1189.60,
-    1209.57,
-    1229.53,
-    1249.49,
-    1269.45,
-    1289.41,
-    1309.38,
-    1329.34,
-    1349.30,
-    1369.26,
-    1389.22,
-    1409.19,
-    1429.15,
-    1449.11,
-    1469.07,
-    1489.03,
-    1508.99,
-    1528.96,
-    1548.92,
-    1578.86,
-    1618.79,
-    1658.71,
-    1698.63,
-    1738.56,
-    1778.48,
-    1818.40,
-    1858.33,
-    1898.25,
-    1938.18,
-    1978.10,
-    2018.02,
-    2057.95,
-    2097.87,
-    2137.80,
-    2177.72,
-    2217.64,
-    2257.57,
-    2297.49,
-    2337.42,
-    2377.34,
-    2417.26,
-    2457.19,
-    2497.11,
-    2537.03,
-    2576.96,
-    2616.88,
-    2656.81,
-    2696.73,
-    2736.65,
-    2776.58,
-    2816.50,
-    2856.43,
-    2896.35,
-    2936.27,
-    2976.20,
-)
-TWL = (
-    446.02,
-    456.00,
-    465.98,
-    475.96,
-    485.95,
-    495.93,
-    505.91,
-    515.89,
-    525.87,
-    535.85,
-    545.83,
-    555.81,
-    565.79,
-    575.77,
-    585.76,
-    595.74,
-    605.72,
-    615.70,
-    625.68,
-    635.66,
-    645.64,
-    655.62,
-    665.60,
-    675.58,
-    685.56,
-    695.55,
-    705.53,
-    715.51,
-    725.49,
-    735.47,
-    745.45,
-    755.43,
-    765.41,
-    775.39,
-    785.37,
-    795.36,
-    805.34,
-    815.32,
-    825.30,
-    835.28,
-    845.26,
-    855.24,
-    865.22,
-    875.20,
-    885.18,
-    895.17,
-    905.15,
-    915.13,
-    925.11,
-    935.09,
-    945.07,
-    955.05,
-    965.03,
-    975.01,
-    984.99,
-    994.97,
-    1004.96,
-    1014.94,
-    1024.92,
-    1034.90,
-    1044.88,
-    1054.86,
-    1064.84,
-    1074.82,
-    1084.80,
-    1094.78,
-    1104.77,
-    1114.75,
-    1124.73,
-    1134.71,
-    1144.69,
-    1154.67,
-    1164.65,
-    1174.63,
-    1184.61,
-    1194.59,
-    1204.58,
-    1214.56,
-    1224.54,
-    1234.52,
-    1244.50,
-    1254.48,
-    1264.46,
-    1274.44,
-    1284.42,
-    1294.40,
-    1304.38,
-    1314.37,
-    1324.35,
-    1334.33,
-    1344.31,
-    1354.29,
-    1364.27,
-    1374.25,
-    1384.23,
-    1394.21,
-    1404.19,
-    1414.18,
-    1424.16,
-    1434.14,
-    1444.12,
-    1454.10,
-    1464.08,
-    1474.06,
-    1484.04,
-    1494.02,
-    1504.00,
-    1513.99,
-    1523.97,
-    1533.95,
-    1543.93,
-    1553.91,
-    1563.89,
-    1573.87,
-    1583.85,
-    1593.83,
-    1603.81,
-    1613.80,
-    1623.78,
-    1633.76,
-    1643.74,
-    1653.72,
-    1663.70,
-    1673.68,
-    1683.66,
-    1693.64,
-    1703.62,
-    1713.60,
-    1723.59,
-    1733.57,
-    1743.55,
-    1753.53,
-    1763.51,
-    1773.49,
-    1783.47,
-    1793.45,
-    1803.43,
-    1813.41,
-    1823.40,
-    1833.38,
-    1843.36,
-    1853.34,
-    1863.32,
-    1873.30,
-    1883.28,
-    1893.26,
-    1903.24,
-    1913.22,
-    1923.21,
-    1933.19,
-    1943.17,
-    1953.15,
-    1963.13,
-    1973.11,
-    1983.09,
-    1993.07,
-    2003.05,
-    2013.03,
-    2023.01,
-    2033.00,
-    2042.98,
-    2052.96,
-    2062.94,
-    2072.92,
-    2082.90,
-    2092.88,
-    2102.86,
-    2112.84,
-    2122.82,
-    2132.81,
-    2142.79,
-    2152.77,
-    2162.75,
-    2172.73,
-    2182.71,
-    2192.69,
-    2202.67,
-    2212.65,
-    2222.63,
-    2232.62,
-    2242.60,
-    2252.58,
-    2262.56,
-    2272.54,
-    2282.52,
-    2292.50,
-    2302.48,
-    2312.46,
-    2322.44,
-    2332.42,
-    2342.41,
-    2352.39,
-    2362.37,
-    2372.35,
-    2382.33,
-    2392.31,
-    2402.29,
-    2412.27,
-    2422.25,
-    2432.23,
-    2442.22,
-    2452.20,
-    2462.18,
-    2472.16,
-    2482.14,
-    2492.12,
-    2502.10,
-    2512.08,
-    2522.06,
-    2532.04,
-    2542.03,
-    2552.01,
-    2561.99,
-    2571.97,
-    2581.95,
-    2591.93,
-    2601.91,
-    2611.89,
-    2621.87,
-    2631.85,
-    2641.83,
-    2651.82,
-    2661.80,
-    2671.78,
-    2681.76,
-    2691.74,
-    2701.72,
-    2711.70,
-    2721.68,
-    2731.66,
-    2741.64,
-    2751.63,
-    2761.61,
-    2771.59,
-    2781.57,
-    2791.55,
-    2801.53,
-    2811.51,
-    2821.49,
-    2831.47,
-    2841.45,
-    2851.44,
-    2861.42,
-    2871.40,
-    2881.38,
-    2891.36,
-    2901.34,
-    2911.32,
-    2921.30,
-    2931.28,
-    2941.26,
-    2951.25,
-    2961.23,
-    2971.21,
-    2981.19,
-    2991.17,
-)
 
 
 def m3_refl(
-    m3_basename, rad_L1, obs, dem=None, shadow_lookup_path=SHADOW_LOOKUP
+    m3_basename,
+    rad_L1,
+    obs,
+    wl=None,
+    dem=None,
+    rms=18,
+    albedo=None,
+    emiss=None,
+    rerad=False,
+    flookup=FLOOKUP,
+    tlookup=TLOOKUP,
+    toffset=0,
 ):
     """
     Return M3 reflectance using the roughness thermal correction (Bandfield et
     al., 2018). Uses ray-casting generated shadow_lookup table. Applies
     standard M3 photometric correction.
 
-    TODO: finish testing this
     """
     # Get wavelength, viewing geometry, photometry from M3 files
-    rms = 18  # Assumed rms roughness value of Moon
-    albedo = 0.12  # Assumed hemispherical broadband albedo
-    emiss = 0.985  # Assumed emissivity
-    wl = get_m3_wls(rad_L1) / 1000  # nm -> um
-    solar_dist = get_solar_dist(m3_basename)
+    if wl is None:
+        wl = get_m3_wls(rad_L1)
+    solar_dist = get_solar_dist(m3_basename, obs)
     sun_thetas, sun_azs, sc_thetas, sc_azs, phases, _ = get_m3_geom(obs, dem)
-    photom = get_m3photom(sun_thetas, sc_thetas, phases)
-
-    # Get rougness emission for each pixel from rad eq on subpixel facets
-    emission = np.zeros(rad_L1.shape)
-    for i in range(emission.shape[0]):
-        for j in range(emission.shape[1]):
-            # TODO: split into function
-            geom = [c[i, j] for c in (sun_thetas, sun_azs, sc_thetas, sc_azs)]
-            emission[i, j] = re.rough_emission_eq(
-                geom, wl, rms, albedo, emiss, solar_dist, shadow_lookup_path
-            )
+    photom = get_m3photom(
+        sun_thetas,
+        sc_thetas,
+        phases,
+        polish=True,
+        targeted=is_targeted(rad_L1),
+    )
+    tlocs = rh.inc_to_tloc(sun_thetas, sun_azs)
 
     # Get solar irradiance
     solar_spec = get_solar_spectrum(is_targeted(rad_L1))
-    L_sun = re.get_solar_irradiance(solar_spec, solar_dist)
+    L_sun = re.get_solar_irradiance(solar_spec, solar_dist[:, :, np.newaxis])
+
+    # Compute albedo from raw (uncorrected) radiance
+    if albedo is None:
+        refl_raw = re.get_rad_factor(rad_L1, 0, L_sun) * photom
+        albedo = get_m3albedo(sun_thetas, refl_raw, solar_spec)
+    if not isinstance(albedo, xr.DataArray):
+        albedo = np.ones(rad_L1.shape[:2]) * albedo
+
+    # geom = (sun_thetas, sun_azs, sc_thetas, sc_azs)
+    # emission = re.rough_emission_lookup(
+    #     geom, wl, rms, albedo, rad_L1.lat, tloc, rerad, flookup, tlookup
+    # )
+    # Get roughness emission for each pixel from rad eq on subpixel facets
+    emission = xr.zeros_like(rad_L1).reindex({"wavelength": wl}, method="pad")
+    for i, lon in enumerate(emission.lon):
+        for j, lat in enumerate(emission.lat):
+            # TODO: split into function, parallelize
+            if isinstance(albedo, xr.DataArray):
+                alb = albedo.sel(lon=lon, lat=lat)
+            else:
+                alb = albedo[i, j]
+            tloc = tlocs[i, j]
+            geom = [c[i, j] for c in (sun_thetas, sun_azs, sc_thetas, sc_azs)]
+            emission[i, j] = re.rough_emission_lookup(
+                geom, wl, rms, alb, lat, tloc, rerad, flookup, tlookup, toffset
+            )
+            # emission[i, j] = re.rough_emission_eq(
+            #   geom, wl, rms, alb, emiss, solar_dist[i, j], rerad, flookup
+            # )
 
     # Remove emission from Level 1 radiance and convert to I/F
-    i_f = re.get_rad_factor(rad_L1, emission, L_sun)
+    rad_emission = emission.interp(wavelength=rad_L1.wavelength)
+    i_f = re.get_rad_factor(rad_L1, rad_emission, L_sun, emiss)
     refl = i_f * photom
-
-    # TODO: New refl way higher, how come? emission func? I/F step?
-    return refl
+    return refl, emission
 
 
 def get_m3_geom(obs, dem=None):
@@ -414,25 +105,42 @@ def get_m3_geom(obs, dem=None):
     sc_theta = np.radians(obs[:, :, 3])
     sc_az = np.radians(obs[:, :, 2])
 
+    # Compute angles in degrees
     i, e, g, sun_sc_az = rh.get_ieg(
         dem_theta, dem_az, sun_theta, sun_az, sc_theta, sc_az
     )
-
+    sun_az = np.rad2deg(sun_az)
+    sc_az = np.rad2deg(sc_az)
     return i, sun_az, e, sc_az, g, sun_sc_az
+
+
+def get_m3_tloc(obs, dem=None):
+    """
+    Return average local time of M3 observation.
+    """
+    return rh.inc_to_tloc(*get_avg_sun_inc_az(obs, dem))
+
+
+def get_avg_sun_inc_az(obs, dem=None):
+    """
+    Return average solar incidence and azimuth from obs file.
+    """
+    sun_thetas, sun_azs, *_ = get_m3_geom(obs, dem)
+    return np.mean(sun_thetas), np.mean(sun_azs)
 
 
 def get_m3_wls(img):
     """
-    Get the wavelength array for an M3 image
+    Return wavelength array for an M3 image [microns].
     """
     if is_targeted(img):
         wls = TWL
     else:
         wls = GWL
-    return np.array(wls)
+    return np.array(wls) / 1000  # [nm] -> [microns]
 
 
-def get_solar_dist(basename):
+def get_solar_dist(basename, obs):
     """
     Get the solar distance subtracted off of M3 obs band 6.
     """
@@ -448,11 +156,12 @@ def get_solar_dist(basename):
     except FileNotFoundError as e:
         w = "Could not get sdist for {}: {}".format(obs_fname, str(e))
         print(w)
-    return sdist
+    solar_dist = obs[:, :, 5] + sdist
+    return solar_dist
 
 
 def get_solar_spectrum(targeted, m3ancpath=M3ANCPATH):
-    """Return m3 solar spectrum"""
+    """Return m3 solar spectrum [W/(m^2 um)]."""
     if targeted:
         fss = m3ancpath + "targeted/M3T20110224_RFL_SOLAR_SPEC.TAB"
     else:
@@ -559,6 +268,22 @@ def get_polish(polish, targeted, m3ancpath=M3ANCPATH):
     return polish_arr
 
 
+def get_m3albedo(sun_thetas, refl, solar_spec):
+    """
+    Return albedo (Bandfield et al. 2018)
+    """
+    # Add factor to change M3 derived albedo to thermal albedo - JB
+    factor = 2 - np.cos(np.deg2rad(sun_thetas))
+
+    # Clip noisy M3 channels
+    refl = refl[:, :, 3:]
+    solar_spec = solar_spec[:, :, 3:]
+    albedo = np.sum(refl * solar_spec, axis=2) / np.sum(solar_spec, axis=2)
+    albedo = albedo * factor
+    albedo.clip(max=0.4)  # limit exteme albedos
+    return albedo
+
+
 def is_targeted(m3img):
     """
     Return True if m3img has 256 bands (targeted mode) rather than 85.
@@ -577,6 +302,11 @@ def get_m3_headers(
 ):
     """
     Return dict of paths to M3 header files for an observation.
+
+    See Also
+    --------
+    https://astrogeology.usgs.gov/maps/
+            moon-mineralogy-mapper-geometric-data-restoration
 
     Examples
     --------
@@ -640,7 +370,6 @@ def get_m3_headers(
             headers[img] = op.join(l2, f)
 
     # USGS corrected loc and obs
-    # https://astrogeology.usgs.gov/maps/moon-mineralogy-mapper-geometric-data-restoration
     if usgs:
         if not usgspath:
             usgspath = dirpath
@@ -665,15 +394,19 @@ def get_m3_headers(
 def parse_envi_header(fname):
     """
     Return dictionary of parameters in the envi header.
+
+    TODO: port to open planetary package
     """
     params = {}
     with open(fname) as f:
-        key, value = "", []
+        key, value = "", ""
         line = f.readline()
         while line:
             if isinstance(value, list):
                 if "}" in line:
-                    value.append(line.split("}")[0].strip())
+                    value.append(  # pylint: disable=E1101
+                        line.split("}")[0].strip()
+                    )
                     params[key] = list(filter(None, value))
                     value = ""
                 else:
@@ -745,3 +478,189 @@ def get_m3_op(basename):
         msg = f"Optical period for {basename} not found. Check img name."
         raise ValueError(msg)
     return opt
+
+
+def read_m3_image(hdr_path, ymin=0, ymax=None, xmin=0, xmax=None):
+    """
+    Return np.array() with subset of m3 image with rasterio. Assumes the
+    image is in the same directory as the header in hdr_path.
+    """
+    ext = ".IMG" if hdr_path[-1].isupper() else ".img"
+    f = hdr_path[:-4] + ext
+    with rio.open(f) as src:
+        rwindow = rio.windows.Window.from_slices(
+            (ymin, ymax), (xmin, xmax), width=src.width, height=src.height
+        )
+        img = rio2xy(src.read(window=rwindow))
+
+    return img
+
+
+def read_m3_geotiff(f, ext, pad=False):
+    """
+    Return M3 image from file f with extent ext using rasterio.
+
+    Parameters
+    ----------
+    f (str): path to file
+    ext (tuple): (latmin, latmax, lonmin, lonmax)
+    pad (bool): pad image to match extent of ext
+    """
+    left, right, bot, top = ext
+    with rio.open(f) as src:
+        w = rio.windows.from_bounds(left, bot, right, top, src.transform)
+        img = rio2xy(src.read(window=w))
+        if pad:
+            img = rio_pad(img, ext, w, src.transform)
+    return img
+
+
+def ext2window(ext, transform):
+    """Return rasterio window of data bounded by ext in dataset with transform."""
+    # Location of upper left corner of data (pixel offset)
+    row_off, col_off = rio.transform.rowcol(transform, ext[0], ext[3])
+    # Size of window (in pixels)
+    xres = transform[0]
+    yres = -transform[4]
+    width = int(round((ext[1] - ext[0]) / xres))
+    height = int(round((ext[3] - ext[2]) / yres))
+    w = rio.windows.Window(col_off, row_off, width, height)
+    return w
+
+
+def read_m3_geotiff_ext(f, ext):
+    """Read M3 geotiff with ext (minlon, maxlon, minlat, maxlat)"""
+    with rio.open(f) as src:
+        w = ext2window(ext, src.transform)
+        img = src.read(window=w)
+        img = rio2xy(img)
+        img = rio_pad(img, ext, w, src.transform)
+        if src.count == 1 and len(img.shape) > 2:
+            img = img[:, :, 0]
+    return img
+
+
+def rio_pad(arr, ext, w, transform, fill_value=np.nan):
+    """Zero-pad a rasterio windowed read array to shape of full extent"""
+    if len(arr.shape) == 2:
+        arr = arr[:, :, np.newaxis]
+    arr_width, arr_height, bands = arr.shape
+    res = transform[0]  # deg/pixel
+    wbounds = rio.transform.array_bounds(w.height, w.width, transform)
+    ext_bounds = (ext[0], ext[2], ext[1], ext[3])
+    # Compute bounds of full extent output image
+    ext_width = int(round((ext_bounds[2] - ext_bounds[0]) / res))  # pixels
+    ext_height = int(round((ext_bounds[3] - ext_bounds[1]) / res))  # pixels
+    # Get coords of window in extent sized image
+    ymax = int(round((ext_bounds[3] - wbounds[3]) / res))
+    xmin = int(round((wbounds[0] - ext_bounds[0]) / res))
+    # Init extent-sized output
+    out = np.full((ext_width, ext_height, bands), fill_value)
+    if (ymax > 0) and (xmin > 0):
+        out[xmin : xmin + arr_width, ymax : ymax + arr_height, :] = arr
+    elif ymax > 0:
+        out[:arr_width, ymax : ymax + arr_height, :] = arr
+    elif xmin > 0:
+        out[xmin : xmin + arr_width, :arr_height, :] = arr
+    else:
+        out[:arr_width, :arr_height, :] = arr
+    return out
+
+
+def read_albedo_map_feng(plot=False, falbedo=FALBEDO):
+    """
+    Return normal bolometric bond albedo albedo map from Feng et al. (2020).
+
+    https://doi.org/10.5281/zenodo.3575481
+    """
+    df = pd.read_csv(falbedo, header=None, delimiter=r"\s+")
+    lats = np.linspace(90, -90, len(df))
+    lon = np.linspace(-180, 180, len(df.columns))
+    albmap = xr.DataArray(df, coords=[lats, lon], dims=["lat", "lon"])
+    albmap.name = "albedo"
+    if plot:
+        albmap.plot.imshow(size=5, aspect=len(albmap.lon) / len(albmap.lat))
+    return albmap
+
+
+# def convert_axes(src, dst, nax=3):
+#     """Return axis order from src or dst."""
+#     axes = {
+#         'xy': [0, 1, 2],
+#         'np': [1, 0, 3],
+#         'rio': [2, 1, 0]
+#     }
+# return axes[src], axes[dst]
+
+
+def rio2xy(arr):
+    """Swap axes from [(bands), rows, columns] to [x, y, (bands)]."""
+    if len(arr.shape) == 3:
+        arr = np.moveaxis(arr, [0, 1, 2], [2, 1, 0])
+    elif len(arr.shape) == 2:
+        arr = np.moveaxis(arr, 0, 1)
+    return arr
+
+
+def xy2np(arr):
+    """Swap axes from [x, y, (bands)] to [rows, columns, (bands)]."""
+    if len(arr.shape) == 3:
+        arr = np.moveaxis(arr, [0, 1, 2], [1, 0, 2])
+    elif len(arr.shape) == 2:
+        arr = np.moveaxis(arr, 0, 1)
+    return arr
+
+
+def wl_to_ind(wl, wavelengths):
+    """Return index of wl in wavelengths."""
+    ind = np.argmin(np.abs(np.array(wavelengths) - wl))
+    return ind, wavelengths[ind]
+
+
+def m3_wl_to_ind(wl, img):
+    """
+    Get index and nearest wavelength of img given wl in nanometers.
+    """
+    return wl_to_ind(wl, get_m3_wls(img))
+
+
+def get_dem_geotiff(
+    fslo, fazim, felev, ext, width=None, height=None, resampling="nearest"
+):
+    """
+    Return DEM geotiff from fslo, fazim, felev geotiff files.
+    """
+    left, right, bot, top = ext
+    rs = getattr(rio.enums.Resampling, resampling)
+    with rio.open(fslo) as s, rio.open(fazim) as a, rio.open(felev) as e:
+        w = rio.windows.from_bounds(left, bot, right, top, s.transform)
+        if width is None:
+            width = int(w.width)
+        if height is None:
+            height = int(w.height)
+        outshape = (1, height, width)
+        slo = s.read(window=w, out_shape=outshape, resampling=rs)
+        azim = a.read(window=w, out_shape=outshape, resampling=rs)
+        elev = e.read(window=w, out_shape=outshape, resampling=rs)
+    dem = rio2xy(np.vstack([slo, azim, elev]))
+    return dem
+
+
+# Spectra
+def get_spec(arr, wlmin=0, wlmax=1e5, wls=None):
+    """Return the wavelengths and spectrum of a 1D arr (1 pixel) of M3 data
+    Optionally specify min and max wavelengths to crop spectrum"""
+    if wls is None:
+        wls = get_m3_wls(arr)
+    bmin, wlmin = wl_to_ind(wlmin, wls)
+    bmax, wlmax = wl_to_ind(wlmax, wls)
+    wls = wls[bmin : bmax + 1]
+    spec = arr[bmin : bmax + 1]
+    return wls, spec
+
+
+def get_avg_spec(img, wlmin=0, wlmax=1e5, wls=None):
+    """Return the wavelengths and mean spectrum within the specified img array.
+    Optionally specify min and max wavelengths to crop spectrum."""
+    arr = np.nanmean(img, axis=(0, 1))  # Average along z (spectral) axis
+    return get_spec(arr, wlmin, wlmax, wls)

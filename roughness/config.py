@@ -1,10 +1,14 @@
 """Roughness configuration."""
+import json
 from pathlib import Path
 from . import __version__
 
 # Constants
 SC = 1360  # Solar constant at 1 au [W/m^2]
 SB = 5.6703271e-8  # Stephan Boltzmann constant [W m^-2 K^-4]
+CCM = 2.99792458e10  # Speed of light in vacuum [cm/s]
+KB = 1.38064852e-23  # Boltzmann constant [J / K]
+HC = 6.62607004e-34  # Planck constant [J s]
 
 # Defaults
 VERSION = __version__
@@ -29,6 +33,8 @@ AZ0 = 270  # Azimuth of LOS [degrees].
 ROOT_DIR = Path(__file__).parents[1]
 ROUGHNESS_DIR = ROOT_DIR / "roughness"
 DATA_DIR = ROOT_DIR / "data"
+DATA_DIR_M3 = DATA_DIR / "m3"
+DATA_DIR_DIVINER = DATA_DIR / "Diviner" / "lev4"
 EXAMPLES_DIR = ROOT_DIR / "examples"
 FIGURES_DIR = ROOT_DIR / "figures"
 FORTRAN_DIR = ROUGHNESS_DIR / "fortran"
@@ -43,9 +49,9 @@ FLOS_F90 = FORTRAN_DIR / "lineofsight.f90"
 FZSURF = DATA_DIR / "zsurf.npy"
 FZ_FACTORS = DATA_DIR / "zsurf_scale_factors.npy"
 FLOOKUP = DATA_DIR / "default_lookup.nc"
-FTOT_FACETS = DATA_DIR / "total_facets_4D.npy"
-FLOS_FACETS = DATA_DIR / "los_facets_4D.npy"
-FLOS_LOOKUP = DATA_DIR / "los_lookup_4D.npy"
+FALBEDO = DATA_DIR / "Feng_et_al_2020_Lunar_bolometric_Bond_albedo.txt"
+TLOOKUP = DATA_DIR / "temp_lookup.nc"
+
 
 # Paths (examples)
 FIG_SLOPE_DIST_SHEP = FIGURES_DIR / "slope_dist_shepard.png"
@@ -65,3 +71,12 @@ HNTHETA = "Number of facet slope (theta) bins in [0, 90) deg (default: 45)."
 HTHRESH = "Threshold number of facets to compute los fraction (default: 25)."
 HDSIZE = "Side length of synthetic DEM in pixels (default: 10000)."
 HRAZ = "Raytracing line of sight azimuth in degrees (default: 270)"
+
+# JSON
+with open(DATA_DIR_M3 / "m3_wls.json") as f:
+    M3_WLS = json.load(f)
+    M3GWL = M3_WLS["GWL"]
+    M3TWL = M3_WLS["TWL"]
+
+# Georeferencing
+MOON2000_ESRI = "ESRI:104903"

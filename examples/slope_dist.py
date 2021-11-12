@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.12.0
 #   kernelspec:
 #     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
 #     name: python3
