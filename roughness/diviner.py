@@ -6,15 +6,14 @@ import rasterio as rio
 import roughness.helpers as rh
 import roughness.config as cfg
 
-DIVINER_WLS = [
-    7.8,  # C3
-    8.25,
-    8.55,
-    (13 + 23) / 2,
-    (25 + 41) / 2,
-    (50 + 100) / 2,
-    (100 + 400) / 2,  # C9
-]  # [microns]
+SIGMA = 5.667e-8
+DIV_C = ["c3", "c4", "c5", "c6", "c7", "c8", "c9"]
+DIV_WL_MIN = np.array([7.55, 8.10, 8.38, 13, 25, 50, 100])  # [microns]
+DIV_WL_MAX = np.array([8.05, 8.40, 8.68, 23, 41, 99, 400])  # [microns]
+DIV_WL1 = np.array([0.0001, 8.075, 8.40, 13, 25, 50, 100])
+DIV_WL2 = np.array([8.075, 8.40, 13, 25, 50, 100, 500])
+DIV_TMIN = np.array([190, 190, 180, 95, 60, 40, 0])
+ITERS = np.array([5, 5, 6, 10, 16, 24, 56])
 
 
 def lev4hourly2xr(
@@ -153,13 +152,44 @@ def smooth_daytime(T_xarr, savefile=None):
     return Tsmooth
 
 
-def add_wls_diviner(xarr):
+def add_wls_diviner(xarr, bands=["t3", "t4", "t5", "t6", "t7", "t8", "t9"]):
     """
-    Return xarr with wavelength coordinate (drop tbol).
+    Return xarr with wavelength coordinate.
     """
-    out = xarr.where(xarr.band != "tb", drop=True)
-    out = out.assign_coords(wavelength=("band", DIVINER_WLS))
+    wl = get_diviner_wls().values
+    out = xarr.sel(band=slice("t3", "t9")).assign_coords(
+        wavelength=("band", wl)
+    )
+    out = out.reindex(band=bands)  # Drops unneeded bands
     return out
+
+
+def get_diviner_wls(bres=1):
+    """
+    Return diviner c3-c9 wavelength arr with band_res values in each bandpass.
+    """
+    if bres == 1:
+        wls = np.mean((DIV_WL_MIN, DIV_WL_MAX), axis=0)
+    else:
+        wzip = zip(DIV_WL_MIN, DIV_WL_MAX)
+        wls = np.array(
+            [np.linspace(w1, w2, bres) for w1, w2 in wzip]
+        ).flatten()
+    return rh.wl2xr(wls)
+
+
+def div_integrated_rad(emission, units="W/m^2/sr/um"):
+    """
+    Return integrated radiance of diviner bands.
+    """
+    out = []
+    for dwlmin, dwlmax in zip(DIV_WL_MIN, DIV_WL_MAX):
+        cemiss = emission.sel(wavelength=slice(dwlmin, dwlmax))
+        wlmin = cemiss.wavelength.min().values
+        wlmax = cemiss.wavelength.max().values
+        out.append(cemiss.integrate("wavelength").values / (wlmax - wlmin))
+    wls = get_diviner_wls().values
+    return rh.spec2xr(out, wls, units=units)
 
 
 def load_div_lev4(
@@ -196,3 +226,39 @@ def load_div_lev4(
         tmp.to_netcdf(savepath)
         out = xr.open_dataarray(savepath)
     return out
+
+
+def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
+    """
+    Return tbol from Diviner C3-C9 brightness temperatures.
+    """
+    temp = np.zeros(7)  # temps to use (in case divbt < tmin)
+    rad = np.zeros(7)
+    for i in range(7)[::-1]:  # Start at C9 and work backwards
+        if divbt[i] > tmin[i]:
+            temp[i] = divbt[i]
+        else:
+            temp[i] = temp[i + 1]  # Use bt from next channel over
+        rad[i] = SIGMA * temp[i] ** 4 * cfst(temp[i], wl1[i], wl2[i], iters[i])
+    tbol = (np.sum(rad) / SIGMA) ** 0.25
+    return tbol
+
+
+def cfst(bt, wl1, wl2, n_iter=100):
+    """
+    Return fraction of Planck radiance between wl1 and wl2 at temp.
+
+    Translated from JB, via DAP via Houghton 'Physics of Atmospheres'
+    """
+
+    def f(wl, bt, n_iter=100):
+        """Iterative helper."""
+        v = 1.43883e4 / (wl * bt)
+        tot = 0
+        for w in range(1, n_iter + 1):
+            wv = w * v
+            ff = (w ** -4) * (np.e ** -wv) * (((wv + 3) * wv + 6) * wv + 6)
+            tot += ff
+        return tot
+
+    return 1.53989733e-1 * (f(wl2, bt, n_iter) - f(wl1, bt, n_iter))

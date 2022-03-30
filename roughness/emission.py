@@ -8,7 +8,7 @@ from roughness.config import SB, SC, CCM, KB, HC, TLOOKUP
 
 
 def rough_emission_lookup(
-    geom, wls, rms, albedo, lat, tloc, rerad=True, flookup=None, tlookup=None
+    geom, wls, rms, albedo, lat, rerad=True, flookup=None, tlookup=None
 ):
     """
     Return rough emission spectrum given geom and params to tlookup.
@@ -28,6 +28,7 @@ def rough_emission_lookup(
     # if date is not None:
     #     date = pd.to_datetime(date)
     sun_theta, sun_az, sc_theta, sc_az = geom
+    tloc = rh.inc_to_tloc(sun_theta, sun_az)
     if isinstance(wls, np.ndarray):
         wls = rh.wl2xr(wls)
 
@@ -38,9 +39,10 @@ def rough_emission_lookup(
     temp_illum = get_temp_table(tloc, albedo, lat, tlookup).interp_like(
         shadow_table
     )
-    temp_shade = get_shadow_temp_table(tloc, albedo, lat, tlookup).interp_like(
-        shadow_table
-    )
+    temp_shade = get_shadow_temp(sun_theta, sun_az, temp_illum)
+    # temp_shade = get_shadow_temp_table(tloc, albedo, lat, tlookup).interp_like(
+    #     shadow_table
+    # )
 
     # Compute 2 component emission of illuminated and shadowed facets
     emission_table = emission_2component(
@@ -48,20 +50,20 @@ def rough_emission_lookup(
     )
 
     if rerad:
-        emission_table += get_reradiation_lookup(emission_table, albedo)
+        # emission_table += get_reradiation_lookup(emission_table, albedo)
+        emission_table += get_reradiation_jb(emission_table, 0.12, 0.95)
 
-    # Weight each facet by its probability of being observed (sc theta, az)
-    view_weights = rn.get_view_table(rms, sc_theta, sc_az, flookup)
-    emission_table *= view_weights
+    # Weight each facet by its probability of being visible from (sc theta, az)
+    #   weighted=True also weights by cos(angle) to view direction
+    view_weight = rn.get_view_table(rms, sc_theta, sc_az, True, flookup)
 
     # Weight each facet by its probability of occurrance
-    if sun_theta > 1e-4:  # TODO: figure out weighting at sun_theta = 0
-        facet_weights = rn.get_facet_weights(rms, sun_theta, flookup)
-        rough_emission = emission_spectrum(emission_table, facet_weights)
-    else:
-        emission0 = emission_table.sel(theta=slice(0, 0.1))
-        rough_emission = emission_spectrum(emission0)
+    facet_weight = rn.get_facet_weights(rms, sun_theta, flookup)
 
+    total_weights = view_weight * facet_weight
+    norm_weights = total_weights / total_weights.sum()
+
+    rough_emission = emission_spectrum(emission_table, norm_weights)
     return rough_emission
 
 
@@ -110,7 +112,7 @@ def get_temp_table(tloc, albedo, lat, tlookup=None):
     """
     if tlookup is None:
         tlookup = TLOOKUP
-    params = [tloc, albedo, lat]
+    params = [tloc, albedo, abs(lat)]  # lat symmetric about equator
     coords = ["tloc", "albedo", "lat"]
     # if date is not None:
     #     params.append(pd.to_datetime(date))
@@ -312,10 +314,11 @@ def emission_spectrum(emission_table, weight_table=None):
     elif weight_table is None:
         weight_table = 1 / np.prod(emission_table.shape[:2])
 
-    weighted = emission_table * weight_table
     if isinstance(emission_table, xr.DataArray):
+        weighted = emission_table.weighted(weight_table.fillna(0))
         spectrum = weighted.sum(dim=("az", "theta"))
     else:
+        weighted = emission_table * weight_table
         spectrum = np.sum(weighted, axis=(0, 1))
     return spectrum
 
@@ -347,8 +350,19 @@ def get_reradiation_lookup(rad_table, albedo=0.12):
 
     """
     rad_table = rn.rotate_az_lookup(rad_table, target_az=180, az0=0)
-    rad_table *= (rad_table.theta / 180).values * albedo
+    rad_table *= (rad_table.theta / 180) * albedo
     return rad_table
+
+
+def get_reradiation_jb(rad_table, albedo=0.12, emiss=0.95):
+    """
+    Return emission incident on surf_theta from re-radiating adjacent level
+    surfaces using JB downwelling approximation.
+    """
+    rad_flat = rad_table.sel(theta=0, az=0)
+    rerad_emitted = rad_flat * emiss
+    rerad_absorbed = (rad_table.theta / 180) * albedo * rerad_emitted
+    return rerad_absorbed
 
 
 def get_reradiation(
@@ -418,7 +432,7 @@ def get_shadow_temp(sun_theta, sun_az, temp0):
     elif sun_theta >= 60 and 180 <= sun_az < 360:
         shadow_temp_factor = 1 - 0.75 * (sun_theta % 60) / 30
     shadow_temp = temp0 - 100 * shadow_temp_factor
-    return float(shadow_temp)
+    return shadow_temp
 
 
 def emission_2component(
@@ -506,12 +520,12 @@ def bbr(wavenumber, temp, radunits="wn"):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         rad = (a * wavenumber ** 3) / (np.exp(b * wavenumber / temp) - 1.0)
-        if radunits == "wl":
-            rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr um)]
+    if radunits == "wl":
+        rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr um)]
     return rad
 
 
-def bbrw(wavelength, temp):
+def bbrw(wavelength, temp, radunits="wl"):
     """
     Return blackbody radiance at given wavelength(s) and temp(s).
 
@@ -520,7 +534,7 @@ def bbrw(wavelength, temp):
     wavelength (num or arr): Wavelength(s) to compute radiance at [microns]
     temp (num or arr): Temperatue(s) to compute radiance at [K]
     """
-    return bbr(wl2wn(wavelength), temp, "wl")
+    return bbr(wl2wn(wavelength), temp, radunits)
 
 
 def btemp(wavenumber, radiance, radunits="wn"):

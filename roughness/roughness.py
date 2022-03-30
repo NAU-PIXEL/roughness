@@ -27,23 +27,48 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     return 1 - get_los_table(rms, sun_theta, sun_az, los_lookup, "prob")
 
 
-def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
+def get_view_table(rms, sc_theta, sc_az, weighted=True, los_lookup=FLOOKUP):
     """
     Return probability that each facet is observed from (sc_theta, sc_az)
-    on a surface with rms roughness.
+    on a surface with rms roughness. If weighted is True, the probability is
+    weighted by the cosine of the angle between the facet and view direction.
 
     Parameters
     ----------
     rms_slope (num): Root-mean-square slope of roughness [deg]
     sc_theta (num or array): Spacecraft emission angle [deg]
     sc_az (num or array): Spacecraft azimuth [deg]
+    weighted (bool): Whether to weight by cos(angle) between facet and view
     los_lookup (path or 4D array): Path to file or los lookup array
 
     Returns
     -------
     view_prob (2D array): View probability table (dims: az, theta)
     """
-    return get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
+    view = get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
+    if weighted:
+        view *= get_view_weights(view.theta, view.az, sc_theta, sc_az)
+    return view
+
+
+def get_view_weights(facet_theta, facet_az, sc_theta, sc_az):
+    """
+    Return weighting factor for surface facets (facet_theta, facet_az) as
+    viewed from (sc_theta, sc_az) as cos(angle) between facet and view vectors.
+
+    Computes cos(angle) between the vectors as cartesian dot product.
+
+    Parameters
+    ----------
+    facet_theta (2D array): Surface facet thetas [deg]
+    facet_az (2D array): Surface facet azimuths [deg]
+    sc_theta (num or array): Spacecraft emission angle [deg]
+    sc_az (num or array): Spacecraft azimuth [deg]
+    """
+    ft, fa, st, sa = map(np.deg2rad, [facet_theta, facet_az, sc_theta, sc_az])
+    facet_cart = rh.sph2cart(*np.meshgrid(ft, fa))
+    sc_cart = rh.sph2cart(st, sa)
+    return rh.element_dot(facet_cart, sc_cart)
 
 
 def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
@@ -62,8 +87,9 @@ def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
     weights (2D array): Weighted probability table that sums to 1.
     """
     tot = get_table_xarr([rms, inc], ["rms", "inc"], None, "total", los_lookup)
-    if inc <= 1e-3:
-        tot = tot.where(tot.theta > 0, other=0)
+    if rms <= 1e-3:
+        tot = xr.zeros_like(tot)
+        tot.loc[dict(theta=0, az=0)] = 1
     return tot / np.nansum(tot)
 
 

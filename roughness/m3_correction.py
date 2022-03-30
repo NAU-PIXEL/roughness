@@ -50,8 +50,6 @@ def m3_refl(
         polish=True,
         targeted=is_targeted(rad_L1),
     )
-    tlocs = rh.inc_to_tloc(sun_thetas, sun_azs)
-
     # Get solar irradiance
     solar_spec = get_solar_spectrum(is_targeted(rad_L1))
     L_sun = re.get_solar_irradiance(solar_spec, solar_dist[:, :, np.newaxis])
@@ -62,7 +60,6 @@ def m3_refl(
         albedo = get_m3albedo(sun_thetas, refl_raw, solar_spec)
     if not isinstance(albedo, xr.DataArray):
         albedo = np.ones(rad_L1.shape[:2]) * albedo
-
     # geom = (sun_thetas, sun_azs, sc_thetas, sc_azs)
     # emission = re.rough_emission_lookup(
     #     geom, wl, rms, albedo, rad_L1.lat, tloc, rerad, flookup, tlookup
@@ -70,16 +67,16 @@ def m3_refl(
     # Get roughness emission for each pixel from rad eq on subpixel facets
     emission = xr.zeros_like(rad_L1).reindex({"wavelength": wl}, method="pad")
     for i, lon in enumerate(emission.lon):
+        print(f"{i}/{emission.lon.size}")
         for j, lat in enumerate(emission.lat):
             # TODO: split into function, parallelize
             if isinstance(albedo, xr.DataArray):
                 alb = albedo.sel(lon=lon, lat=lat)
             else:
                 alb = albedo[i, j]
-            tloc = tlocs[i, j]
             geom = [c[i, j] for c in (sun_thetas, sun_azs, sc_thetas, sc_azs)]
             emission[i, j] = re.rough_emission_lookup(
-                geom, wl, rms, alb, lat, tloc, rerad, flookup, tlookup, toffset
+                geom, wl, rms, alb, lat, rerad, flookup, tlookup
             )
             # emission[i, j] = re.rough_emission_eq(
             #   geom, wl, rms, alb, emiss, solar_dist[i, j], rerad, flookup
@@ -567,7 +564,7 @@ def rio_pad(arr, ext, w, transform, fill_value=np.nan):
     return out
 
 
-def read_albedo_map_feng(plot=False, falbedo=FALBEDO):
+def read_albedo_map_feng(plot=False, falbedo=FALBEDO, amin=0.04, amax=0.22):
     """
     Return normal bolometric bond albedo albedo map from Feng et al. (2020).
 
@@ -580,7 +577,7 @@ def read_albedo_map_feng(plot=False, falbedo=FALBEDO):
     albmap.name = "albedo"
     if plot:
         albmap.plot.imshow(size=5, aspect=len(albmap.lon) / len(albmap.lat))
-    return albmap
+    return albmap.clip(amin, amax)
 
 
 # def convert_axes(src, dst, nax=3):
