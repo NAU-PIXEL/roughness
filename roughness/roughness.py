@@ -87,10 +87,10 @@ def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
     weights (2D array): Weighted probability table that sums to 1.
     """
     tot = get_table_xarr([rms, inc], ["rms", "inc"], None, "total", los_lookup)
-    if rms <= 1e-3:
+    if rms <= tot.theta.values[1]:
         tot = xr.zeros_like(tot)
-        tot.loc[dict(theta=0, az=0)] = 1
-    return tot / np.nansum(tot)
+        tot.loc[{"theta": 0}] = 1
+    return tot / tot.sum(skipna=True)
 
 
 def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):
@@ -187,7 +187,7 @@ def rotate_az_lookup(los_table, target_az, az0=None):
     return los_table.roll(az=az_shift, roll_coords=False)
 
 
-def slope_dist(theta, theta0, dist="rms"):
+def slope_dist(theta, theta0, dist="rms", units="rad"):
     """
     Return slope probability distribution for rough fractal surfaces. Computes
     distributions parameterized by mean slope (theta0) using Shepard 1995 (rms)
@@ -198,12 +198,17 @@ def slope_dist(theta, theta0, dist="rms"):
     theta (array): Angles to compute the slope distribution at [rad].
     theta0 (num): Mean slope angle (fixed param in RMS / theta-bar eq.) [rad].
     dist (str): Distribution type (rms or tbar)
+    units (str): Units of theta and theta0 (deg or rad)
 
     Returns
     -------
     slopes (array): Probability of a slope occurring at each theta.
     """
     theta = np.atleast_1d(theta)
+    if units == "deg":
+        theta = np.radians(theta)
+        theta0 = np.radians(theta0)
+
     # If theta0 is 0, slope_dist is undefined. Set to 0 everywhere.
     if theta0 == 0:
         return np.zeros_like(theta)

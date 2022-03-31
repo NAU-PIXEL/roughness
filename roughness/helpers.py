@@ -10,7 +10,7 @@ from . import config as cfg
 from . import __version__
 
 # Line of sight helpers
-def lookup2xarray(lookups):
+def lookup2xarray(lookups, rms_coords=None, inc_coords=None):
     """
     Convert list of default lookups to xarray.DataSet.
 
@@ -24,9 +24,14 @@ def lookup2xarray(lookups):
     """
     names = cfg.LUT_NAMES
     longnames = cfg.LUT_LONGNAMES
+    coords = get_lookup_coords(*lookups[0].shape)
+    if rms_coords is not None:
+        coords[0] = rms_coords
+    if inc_coords is not None:
+        coords[1] = inc_coords
     for i, lut in enumerate(lookups):
         # Make DataArray
-        da = np2xr(lut, name=names[i])
+        da = np2xr(lut, name=names[i], coords=coords)
         da.attrs["long_name"] = longnames[i]
 
         # Add DataArray to DataSet
@@ -102,6 +107,28 @@ def spec2xr(arr, wls, units="W/m^2/sr/um", wl_units="microns"):
 
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
     """
+    Return lookup table coordinate arrays
+
+    Parameters
+    ----------
+    nrms (int): Number of RMS slopes in [0, 50] degrees.
+    ninc (int): Number of incidence angles in [0, 90] degrees.
+    naz (int): Number of facet azimuth bins in [0, 360] degrees.
+    ntheta (int): Number of facet slope bins in [0, 90] degrees.
+
+    Returns
+    -------
+    lookup_coords (list of array): Coordinate arrays (rms, cinc, az, theta)
+    """
+    rmss, incs, azs, thetas = get_lookup_bins(nrms, ninc, naz, ntheta)
+    # Get slope and az bin centers
+    azs = (azs[:-1] + azs[1:]) / 2
+    thetas = (thetas[:-1] + thetas[1:]) / 2
+    return [rmss, incs, azs, thetas]
+
+
+def get_lookup_bins(nrms=10, ninc=10, naz=36, ntheta=45):
+    """
     Return coordinate arrays corresponding to number of elements in each axis.
 
     Return lookup axes in the following order with ranges:
@@ -112,21 +139,20 @@ def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
 
     Parameters
     ----------
-    nrms (int): Number of RMS slopes in [0, 50) degrees.
-    ninc (int): Number of incidence angles in [0, 90) degrees.
-    naz (int): Number of facet azimuth bins in [0, 360) degrees.
-    ntheta (int): Number of facet slope bins in [0, 90) degrees.
+    nrms (int): Number of RMS slopes in [0, 50] degrees.
+    ninc (int): Number of incidence angles in [0, 90] degrees.
+    naz (int): Number of facet azimuth bins in [0, 360] degrees.
+    ntheta (int): Number of facet slope bins in [0, 90] degrees.
 
     Return
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    rms_coords = np.linspace(0, 50, nrms, endpoint=False)
-    cinc_coords = np.linspace(1, 0, ninc, endpoint=True)  # [0, 90) degrees
-    azim_coords = np.linspace(0, 360, naz, endpoint=False)
-    slope_coords = np.linspace(0, 90, ntheta, endpoint=False)
+    rms_coords = np.linspace(0, 45, nrms)
+    cinc_coords = np.linspace(1, 0, ninc)  # cos([0, 90] degrees)
+    azim_coords = np.linspace(0, 360, naz + 1)
+    slope_coords = np.linspace(0, 90, ntheta + 1)
     inc_coords = np.rad2deg(np.arccos(cinc_coords))
-
     return (rms_coords, inc_coords, azim_coords, slope_coords)
 
 
@@ -327,9 +353,9 @@ def get_surf_geometry(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     ground = sph2cart(ground_zen, ground_az)
     sun = sph2cart(sun_zen, sun_az)
     sc = sph2cart(sc_zen, sc_az)
-    inc = get_local_inc(ground, sun)
-    em = get_local_em(ground, sc)
-    phase = get_local_phase(sun, sc)
+    inc = get_angle_between(ground, sun)
+    em = get_angle_between(ground, sc)
+    phase = get_angle_between(sun, sc)
     az = get_local_az(ground, sun, sc)
     return (inc, em, phase, az)
 

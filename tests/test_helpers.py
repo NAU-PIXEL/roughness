@@ -28,30 +28,19 @@ def test_sph2cart_2d():
 
 def test_get_lookup_coords():
     """Test get_lookup_coords"""
-    rms, inc, az, theta = rh.get_lookup_coords(5, 2, 4, 3)
-    np.testing.assert_almost_equal(rms, [0, 10, 20, 30, 40])
-    np.testing.assert_almost_equal(inc, [0, 60])
-    np.testing.assert_almost_equal(az, [0, 90, 180, 270])
-    np.testing.assert_almost_equal(theta, [0, 30, 60])
+    rms, inc, az, theta = rh.get_lookup_coords(4, 2, 4, 3)
+    np.testing.assert_almost_equal(rms, [0, 15, 30, 45])
+    np.testing.assert_almost_equal(inc, [0, 90])
+    np.testing.assert_almost_equal(az, [45, 135, 225, 315])
+    np.testing.assert_almost_equal(theta, [15, 45, 75])
 
 
 def test_facet_grids():
     """Test facet_grids"""
-    table = np.ones((3, 2))
+    table = np.ones((2, 3))
     actual = rh.facet_grids(table)
-    expected = [
-        np.array([[0, 45], [0, 45], [0, 45]]),
-        np.array([[0, 0], [120, 120], [240, 240]]),
-    ]
-    np.testing.assert_almost_equal(actual, expected)
-
-
-def test_facet_grids_radians():
-    """Test facet_grids with radian units"""
-    table = np.ones((2, 2))
-    actual = rh.facet_grids(table, units="radians")
-    expected = [
-        np.array([[0, np.pi / 4], [0, np.pi / 4]]),
-        np.array([[0, 0], [np.pi, np.pi]]),
-    ]
+    expected = (
+        np.array([[15.0, 45.0, 75.0], [15.0, 45.0, 75.0]]),
+        np.array([[90.0, 90.0, 90.0], [270.0, 270.0, 270.0]]),
+    )
     np.testing.assert_almost_equal(actual, expected)

@@ -86,7 +86,7 @@ def plot_slope_az_table(
         ax.set_ylabel("Facet azimuth angle [deg]")
         ax.figure.colorbar(p, ax=ax, shrink=0.8, label=clabel)
     ax.set_title(title)
-    return ax
+    return p
 
 
 # M3 plotting
