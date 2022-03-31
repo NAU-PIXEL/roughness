@@ -10,18 +10,22 @@ import roughness.make_los_table as mlt
 )
 def test_make_los_table_small():
     """Test make_los_table()."""
-    rms_inc_az_theta = (2, 2, 1, 2)
+    rmss = np.array([0, 45])
+    incs = np.array([0, 90])
+    naz, ntheta = (1, 2)
     thresh = 0
     size = 100
+    # TODO: mock this to avoid randomness
     np.random.seed(0)
-    actual = mlt.make_los_table(*rms_inc_az_theta, thresh, size, write=False)
+    zsurf = mlt.make_zsurf(size, write=False)
+    actual = mlt.make_los_table(zsurf, rmss, incs, naz, ntheta, thresh)
     expected = [
-        np.array([[[[0, 0]], [[0, 0]]], [[[9806, 194]], [[9806, 194]]]]),
-        np.array([[[[0, 0]], [[0, 0]]], [[[9806, 194]], [[7792, 127]]]]),
+        np.array([[[[0, 0]], [[0, 0]]], [[[5083, 4917]], [[0, 0]]]]),
+        np.array([[[[0, 0]], [[0, 0]]], [[[5083, 4917]], [[0, 0]]]]),
         np.array(
             [
                 [[[np.nan, np.nan]], [[np.nan, np.nan]]],
-                [[[1, 1]], [[0.7946155, 0.6546392]]],
+                [[[1, 1]], [[np.nan, np.nan]]],
             ]
         ),
     ]

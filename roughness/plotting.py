@@ -17,6 +17,7 @@ def plot_slope_az_table(
     table,
     cmap_r=False,
     clabel=None,
+    title=None,
     ax=None,
     proj=None,
     vmin=None,
@@ -42,6 +43,8 @@ def plot_slope_az_table(
         raise ValueError(msg)
     if ax is None:
         _, ax = plt.subplots(figsize=(6, 6), subplot_kw={"projection": proj})
+    if title is None:
+        title = "Facet Slope vs. Azimuth"
     if vmin is None:
         vmin = np.nanmin(table)
     if vmax is None:
@@ -67,7 +70,6 @@ def plot_slope_az_table(
         ax.set_theta_direction(-1)
         ax.set_rlabel_position(15)
         ax.grid("on", lw=0.1, c="k")
-        ax.set_title("Facet slope vs. facet azimuth")
         ax.figure.colorbar(p, ax=ax, shrink=0.8, label=clabel)
     else:
         p = ax.imshow(
@@ -80,11 +82,11 @@ def plot_slope_az_table(
             interpolation="none",
             **kwargs,
         )
-        ax.set_title("Facet Slope vs. Facet Azimuth")
         ax.set_xlabel("Facet slope angle [deg]")
         ax.set_ylabel("Facet azimuth angle [deg]")
         ax.figure.colorbar(p, ax=ax, shrink=0.8, label=clabel)
-    return ax
+    ax.set_title(title)
+    return p
 
 
 # M3 plotting

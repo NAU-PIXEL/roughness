@@ -137,6 +137,7 @@ dmypy.json
 
 # Local testing
 tmp/
+scratch/
 
 # Data folder except !items
 /data/*

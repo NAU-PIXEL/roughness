@@ -27,23 +27,48 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     return 1 - get_los_table(rms, sun_theta, sun_az, los_lookup, "prob")
 
 
-def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
+def get_view_table(rms, sc_theta, sc_az, weighted=True, los_lookup=FLOOKUP):
     """
     Return probability that each facet is observed from (sc_theta, sc_az)
-    on a surface with rms roughness.
+    on a surface with rms roughness. If weighted is True, the probability is
+    weighted by the cosine of the angle between the facet and view direction.
 
     Parameters
     ----------
     rms_slope (num): Root-mean-square slope of roughness [deg]
     sc_theta (num or array): Spacecraft emission angle [deg]
     sc_az (num or array): Spacecraft azimuth [deg]
+    weighted (bool): Whether to weight by cos(angle) between facet and view
     los_lookup (path or 4D array): Path to file or los lookup array
 
     Returns
     -------
     view_prob (2D array): View probability table (dims: az, theta)
     """
-    return get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
+    view = get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
+    if weighted:
+        view *= get_view_weights(view.theta, view.az, sc_theta, sc_az)
+    return view
+
+
+def get_view_weights(facet_theta, facet_az, sc_theta, sc_az):
+    """
+    Return weighting factor for surface facets (facet_theta, facet_az) as
+    viewed from (sc_theta, sc_az) as cos(angle) between facet and view vectors.
+
+    Computes cos(angle) between the vectors as cartesian dot product.
+
+    Parameters
+    ----------
+    facet_theta (2D array): Surface facet thetas [deg]
+    facet_az (2D array): Surface facet azimuths [deg]
+    sc_theta (num or array): Spacecraft emission angle [deg]
+    sc_az (num or array): Spacecraft azimuth [deg]
+    """
+    ft, fa, st, sa = map(np.deg2rad, [facet_theta, facet_az, sc_theta, sc_az])
+    facet_cart = rh.sph2cart(*np.meshgrid(ft, fa))
+    sc_cart = rh.sph2cart(st, sa)
+    return rh.element_dot(facet_cart, sc_cart)
 
 
 def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
@@ -62,9 +87,10 @@ def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
     weights (2D array): Weighted probability table that sums to 1.
     """
     tot = get_table_xarr([rms, inc], ["rms", "inc"], None, "total", los_lookup)
-    if inc <= 1e-3:
-        tot = tot.where(tot.theta > 0, other=0)
-    return tot / np.nansum(tot)
+    if rms <= tot.theta.values[1]:
+        tot = xr.zeros_like(tot)
+        tot.loc[{"theta": 0}] = 1
+    return tot / tot.sum(skipna=True)
 
 
 def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):
@@ -161,7 +187,7 @@ def rotate_az_lookup(los_table, target_az, az0=None):
     return los_table.roll(az=az_shift, roll_coords=False)
 
 
-def slope_dist(theta, theta0, dist="rms"):
+def slope_dist(theta, theta0, dist="rms", units="rad"):
     """
     Return slope probability distribution for rough fractal surfaces. Computes
     distributions parameterized by mean slope (theta0) using Shepard 1995 (rms)
@@ -172,12 +198,17 @@ def slope_dist(theta, theta0, dist="rms"):
     theta (array): Angles to compute the slope distribution at [rad].
     theta0 (num): Mean slope angle (fixed param in RMS / theta-bar eq.) [rad].
     dist (str): Distribution type (rms or tbar)
+    units (str): Units of theta and theta0 (deg or rad)
 
     Returns
     -------
     slopes (array): Probability of a slope occurring at each theta.
     """
     theta = np.atleast_1d(theta)
+    if units == "deg":
+        theta = np.radians(theta)
+        theta0 = np.radians(theta0)
+
     # If theta0 is 0, slope_dist is undefined. Set to 0 everywhere.
     if theta0 == 0:
         return np.zeros_like(theta)

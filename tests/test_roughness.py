@@ -28,7 +28,7 @@ def test_get_view_table_nadir():
     """Test get_view_table() with nadir spacecraft vector."""
     rms = 20
     sc_theta, sc_az = (0, 270)  # spacecraft emisssion angle
-    actual = np.nansum(rn.get_view_table(rms, sc_theta, sc_az))
+    actual = np.nansum(rn.get_view_table(rms, sc_theta, sc_az, False))
     expected = 792
     np.testing.assert_equal(actual, expected)
 

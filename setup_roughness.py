@@ -1,7 +1,7 @@
 """Init roughness - run first time using roughness or after updating."""
 import argparse
 from roughness import __version__
-from roughness.make_los_table import make_los_table, make_default_los_table
+from roughness.make_los_table import make_default_los_table
 import roughness.config as cfg
 import roughness.helpers as rh
 
@@ -30,11 +30,11 @@ if __name__ == "__main__":
     else:
         # Make line of sight lookup table
         default = kwargs.pop("default", False)
-        if default or not cfg.FLOS_LOOKUP.exists():
+        if default or not cfg.FLOOKUP.exists():
             print("Generating default los table.")
             make_default_los_table()
             rh.set_data_version()
-        elif rh.check_data_updated():
-            _ = make_los_table(**kwargs)
+        # elif rh.check_data_updated():
+        # _ = make_los_table(**kwargs)
         else:
             print("No changes made")

@@ -10,7 +10,7 @@ from . import config as cfg
 from . import __version__
 
 # Line of sight helpers
-def lookup2xarray(lookups):
+def lookup2xarray(lookups, rms_coords=None, inc_coords=None):
     """
     Convert list of default lookups to xarray.DataSet.
 
@@ -24,9 +24,14 @@ def lookup2xarray(lookups):
     """
     names = cfg.LUT_NAMES
     longnames = cfg.LUT_LONGNAMES
+    coords = get_lookup_coords(*lookups[0].shape)
+    if rms_coords is not None:
+        coords[0] = rms_coords
+    if inc_coords is not None:
+        coords[1] = inc_coords
     for i, lut in enumerate(lookups):
         # Make DataArray
-        da = np2xr(lut, name=names[i])
+        da = np2xr(lut, name=names[i], coords=coords)
         da.attrs["long_name"] = longnames[i]
 
         # Add DataArray to DataSet
@@ -91,7 +96,38 @@ def wn2xr(arr, units="cm^-1"):
     return da
 
 
+def spec2xr(arr, wls, units="W/m^2/sr/um", wl_units="microns"):
+    """Return spectral numpy array as xarray."""
+    da = xr.DataArray(arr, coords=[wls], dims=["wavelength"], name="Radiance")
+    da.attrs["units"] = units
+    da.coords["wavelength"].attrs["long_name"] = "Wavelength"
+    da.coords["wavelength"].attrs["units"] = wl_units
+    return da
+
+
 def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
+    """
+    Return lookup table coordinate arrays
+
+    Parameters
+    ----------
+    nrms (int): Number of RMS slopes in [0, 50] degrees.
+    ninc (int): Number of incidence angles in [0, 90] degrees.
+    naz (int): Number of facet azimuth bins in [0, 360] degrees.
+    ntheta (int): Number of facet slope bins in [0, 90] degrees.
+
+    Returns
+    -------
+    lookup_coords (list of array): Coordinate arrays (rms, cinc, az, theta)
+    """
+    rmss, incs, azs, thetas = get_lookup_bins(nrms, ninc, naz, ntheta)
+    # Get slope and az bin centers
+    azs = (azs[:-1] + azs[1:]) / 2
+    thetas = (thetas[:-1] + thetas[1:]) / 2
+    return [rmss, incs, azs, thetas]
+
+
+def get_lookup_bins(nrms=10, ninc=10, naz=36, ntheta=45):
     """
     Return coordinate arrays corresponding to number of elements in each axis.
 
@@ -103,21 +139,20 @@ def get_lookup_coords(nrms=10, ninc=10, naz=36, ntheta=45):
 
     Parameters
     ----------
-    nrms (int): Number of RMS slopes in [0, 50) degrees.
-    ninc (int): Number of incidence angles in [0, 90) degrees.
-    naz (int): Number of facet azimuth bins in [0, 360) degrees.
-    ntheta (int): Number of facet slope bins in [0, 90) degrees.
+    nrms (int): Number of RMS slopes in [0, 50] degrees.
+    ninc (int): Number of incidence angles in [0, 90] degrees.
+    naz (int): Number of facet azimuth bins in [0, 360] degrees.
+    ntheta (int): Number of facet slope bins in [0, 90] degrees.
 
     Return
     ------
     lookup_coords (tuple of array): Coordinate arrays (rms, cinc, az, theta)
     """
-    rms_coords = np.linspace(0, 50, nrms, endpoint=False)
-    cinc_coords = np.linspace(1, 0, ninc, endpoint=True)  # [0, 90) degrees
-    azim_coords = np.linspace(0, 360, naz, endpoint=False)
-    slope_coords = np.linspace(0, 90, ntheta, endpoint=False)
+    rms_coords = np.linspace(0, 45, nrms)
+    cinc_coords = np.linspace(1, 0, ninc)  # cos([0, 90] degrees)
+    azim_coords = np.linspace(0, 360, naz + 1)
+    slope_coords = np.linspace(0, 90, ntheta + 1)
     inc_coords = np.rad2deg(np.arccos(cinc_coords))
-
     return (rms_coords, inc_coords, azim_coords, slope_coords)
 
 
@@ -318,9 +353,9 @@ def get_surf_geometry(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     ground = sph2cart(ground_zen, ground_az)
     sun = sph2cart(sun_zen, sun_az)
     sc = sph2cart(sc_zen, sc_az)
-    inc = get_local_inc(ground, sun)
-    em = get_local_em(ground, sc)
-    phase = get_local_phase(sun, sc)
+    inc = get_angle_between(ground, sun)
+    em = get_angle_between(ground, sc)
+    phase = get_angle_between(sun, sc)
     az = get_local_az(ground, sun, sc)
     return (inc, em, phase, az)
 
@@ -335,20 +370,24 @@ def get_ieg(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     ground = sph2cart(ground_zen, ground_az)
     sun = sph2cart(sun_zen, sun_az)
     sc = sph2cart(sc_zen, sc_az)
-    inc = get_local_inc(ground, sun)
-    em = get_local_em(ground, sc)
-    phase = get_local_phase(sun, sc)
+    inc = get_angle_between(ground, sun, True)
+    em = get_angle_between(ground, sc, True)
+    phase = get_angle_between(sun, sc, True)
     az = get_local_az(ground, sun, sc)
     return (inc, em, phase, az)
 
 
-def safe_arccos(arr):
-    """Return arccos, restricting output to [-1, 1] without raising Exception."""
-    if (arr < -1).any() or (arr > 1).any():
-        print("Invalid cosine input; restrict to [-1,1]")
-        arr[arr < -1] = -1
-        arr[arr > 1] = 1
-    return np.arccos(arr)
+def get_angle_between(vec1, vec2, safe_arccos=False):
+    """
+    Return angle between cartesian vec1 and vec2 using dot product.
+
+    If vec1 or vec2 are NxMx3, compute element-wise.
+    """
+    dot = element_dot(vec1, vec2)
+    if safe_arccos:
+        # Restrict dot product to [-1, 1] to safely pass to arccos
+        dot = np.clip(dot, -1, 1)
+    return np.rad2deg(np.arccos(dot))
 
 
 def get_azim(ground_sc_ground, ground_sun_ground):
@@ -366,37 +405,6 @@ def get_azim(ground_sc_ground, ground_sun_ground):
     return dot_azim
 
 
-def get_local_inc(ground, sun):
-    """
-    Return solar incidence angle of each pixel given local topography. Assumes
-    inputs are same size and shape and are in 3D Cartesian coords (ixjxk).
-    """
-    cos_inc = element_dot(ground, sun)
-    inc = np.degrees(safe_arccos(cos_inc))
-    inc[inc > 89.999] = 89.999
-    return inc
-
-
-def get_local_em(ground, sc):
-    """
-    Return emergence angle of each pixel given local topography. Assumes
-    inputs are same size and shape and are in 3D Cartesian coords (ixjxk).
-    """
-    cos_em = element_dot(ground, sc)
-    em = np.degrees(safe_arccos(cos_em))
-    return em
-
-
-def get_local_phase(sun, sc):
-    """
-    Return phase angle of each pixel given local topography. Assumes
-    inputs are same size and shape and are in 3D Cartesian coords (ixjxk).
-    """
-    cos_phase = element_dot(sc, sun)
-    phase = np.degrees(safe_arccos(cos_phase))
-    return phase
-
-
 def get_local_az(ground, sun, sc):
     """
     Return azimuth angle of the spacecraft with respect to the sun and local
@@ -405,9 +413,8 @@ def get_local_az(ground, sun, sc):
     """
     sc_rel_ground = element_norm(element_triple_cross(ground, sc, ground))
     sun_rel_ground = element_norm(element_triple_cross(ground, sun, ground))
-    cos_az = element_dot(sc_rel_ground, sun_rel_ground)
-    az = np.degrees(safe_arccos(cos_az))
-    az[(az < 0) * (az > 180)] = 0
+    az = get_angle_between(sc_rel_ground, sun_rel_ground, True)
+    az[((az < 0) & (az > 180)) | np.isnan(az)] = 0
     return az
 
 
@@ -422,8 +429,8 @@ def inc_to_tloc(inc, az):
     az: (str)
         Solar azimuth in degrees (0, 360)
     """
-    inc = inc.copy()
     if isinstance(az, np.ndarray):
+        inc = inc.copy()
         inc[az < 180] *= -1
     elif az < 180:
         inc *= -1
@@ -432,13 +439,29 @@ def inc_to_tloc(inc, az):
     return tloc
 
 
-def tloc_to_inc(tloc):
+def tloc_to_inc(tloc, lat=0):
     """
-    Convert decimal local time to solar incidence (equator only).
+    Return the solar incidence angle given the local time in hrs.
+
+    Parameters
+    ----------
+    tloc: (float)
+        Local time [0, 24] [hrs]
+    lat: (float)
+        Latitude (-90, 90) [deg]
+
+    Return
+    ----------
+    inc: (float)
+        Solar incidence (0, 90) [deg]
     """
-    coinc = (tloc - 6) * 90 / 6  # (6, 18) -> (0, 180)
-    inc = coinc - 90  # (0, 180) -> (-90, 90)
-    return inc
+    latr = np.radians(lat)
+    hour_angle = np.radians(15 * (tloc - 12))  # (morning is -; afternoon is +)
+    inc = np.arccos(np.cos(hour_angle) * np.cos(latr))
+    # az = np.arccos(-np.cos(hour_angle) * np.sin(latr) / np.cos(np.pi/2 - inc))
+    # if hour_angle > 0:
+    #     az = 2 * np.pi - az
+    return np.rad2deg(inc)
 
 
 # Linear algebra
@@ -454,10 +477,19 @@ def tloc_to_inc(tloc):
 #     return az, elev
 
 
+def as_cart3D(vecs):
+    """Return list of vecs as shape (N, M, 3) if they are not already."""
+    for i, vec in enumerate(vecs):
+        if vec.ndim == 1:
+            vecs[i] = vec[np.newaxis, np.newaxis, :]
+    return vecs
+
+
 def element_cross(A, B):
     """
     Return element-wise cross product of two 3D arrays in cartesian coords.
     """
+    A, B = as_cart3D([A, B])
     out = np.zeros_like(A)
     out[:, :, 0] = A[:, :, 1] * B[:, :, 2] - A[:, :, 2] * B[:, :, 1]
     out[:, :, 1] = A[:, :, 2] * B[:, :, 0] - A[:, :, 0] * B[:, :, 2]
@@ -467,17 +499,20 @@ def element_cross(A, B):
 
 def element_dot(A, B):
     """Return element-wise dot product of two 3D arr in Cartesian coords."""
+    A, B = as_cart3D([A, B])
     return np.sum(A * B, axis=2)
 
 
 def element_norm(A):
     """Return input array of vectors normalized to length 1."""
+    A = as_cart3D([A])[0]
     mag = np.sqrt(np.sum(A ** 2, axis=2))
     return A / mag[:, :, np.newaxis]
 
 
 def element_triple_cross(A, B, C):
     """Return element-wise triple cross product of three 3D arr in Cartesian"""
+    A, B, C = as_cart3D([A, B, C])
     return (
         B * (element_dot(A, C))[:, :, np.newaxis]
         - C * (element_dot(A, B))[:, :, np.newaxis]
