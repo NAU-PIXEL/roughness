@@ -296,6 +296,10 @@ albedo_map = m3.read_albedo_map_feng().interp_like(rad)
 # Compute at extra wls to see emission at diviner wls
 wl_all = np.concatenate([wls, diviner_wls])
 
+
+# emission.isel(lat=2, lon=2).plot.line(x='wavelength')
+
+# %%
 # Compute ref correction
 # refl, emission = m3.m3_refl(basename, rad, obs, wls, dem)
 clat = np.mean(m3ext[2:4])
@@ -304,18 +308,8 @@ date = "2009-Jul-31"
 emiss = None
 rms = 18
 refl, emission = m3.m3_refl(
-    basename,
-    rad,
-    obs,
-    wl_all,
-    dem,
-    rms,
-    albedo_map,
-    emiss,
-    clat=clat,
-    date=date,
+    basename, rad, obs, wl_all, dem, rms, albedo_map, emiss, rerad=False
 )
-# emission.isel(lat=2, lon=2).plot.line(x='wavelength')
 
 # %%
 tloc = 9.25
@@ -323,7 +317,7 @@ f, ax = plt.subplots(1, 3, figsize=(8, 4))
 rad.isel(wavelength=5).T.plot.imshow(ax=ax[0])
 albedo_map.interp_like(rad).plot.imshow(ax=ax[1])
 Tdiv = T_smooth.sel(
-    lat=slice(m3ext[2], m3ext[3]), lon=slice(m3ext[0], m3ext[1])
+    lat=slice(m3ext[3], m3ext[2]), lon=slice(m3ext[0], m3ext[1])
 )
 q = Tdiv.sel(tloc=tloc, band="t4").plot.imshow(ax=ax[2])
 
@@ -416,7 +410,7 @@ ktmp
 # %%
 import pandas as pd
 
-t = xr.open_dataarray(
+t = xr.load_dataarray(
     "/home/ctaiudovicic/projects/roughness/data/temp_lookup.nc"
 )
 t["gdate"] = pd.DatetimeIndex(t["gdate"].values)
@@ -596,37 +590,41 @@ plt.show()
 
 # %%
 # Manual geom check
-# import roughness.helpers as rh
+import roughness.helpers as rh
 
 # Compute inc using dem
-# theta, az, _ = dem[16, 15]
-# print(np.degrees([theta, az]))
-# ground = rh.sph2cart(theta, az)
+cx, cy = np.array(dem.shape[:2]) // 2
+theta, az, _ = dem[cx, cy, :]
+print("dem (theta,az):", np.degrees([theta, az]))
+ground = rh.sph2cart(theta, az)
 # print(ground)
 
-# sun_az, sun_theta = np.radians(obs[16, 15, :2])
-# print(np.degrees([sun_theta, sun_az]))
-# sun = rh.sph2cart(sun_theta, sun_az)
-# print(sun)
-# rh.get_local_inc(ground[None, None, :], sun[None, None, :])
+# Local inc with dem
+sun_az, sun_theta = np.radians(obs[cx, cy, :2])
+print(np.degrees([sun_theta, sun_az]))
+sun = rh.sph2cart(sun_theta, sun_az)
+print(sun)
+print()
+inc = rh.get_local_inc(ground[None, None, :], sun[None, None, :])
+print("Local inc (DEM):", np.degrees(np.arccos(fac_cinc)), inc)
 
 # Compute inc using obs angles
-# fac_slope, fac_az = np.radians(obs[16, 15, 7:9])
-# fac_cinc = obs[16, 15, 9]
-# print(np.degrees((fac_slope, fac_az)))
-# # alt = obs[16, 15, 6]
+fac_slope, fac_az = np.radians(obs[cx, cy, 7:9])
+fac_cinc = obs[cx, cy, 9]
+print("OBS Facet (slope, az)", np.degrees((fac_slope, fac_az)))
+print("Local inc (OBS):", np.degrees(np.arccos(fac_cinc)))
+# alt = obs[cx, cy, 6]
 # ground = rh.sph2cart(fac_slope, fac_az)
 # print(ground)
 
-# print('sun')
-# sun_az, sun_theta = np.radians(obs[16, 15, :2])
-# print(np.degrees((sun_theta, sun_az)))
-# # sdist = obs[16, 15, 5] # +m3.get_solar_dist(basename)
-# # sdist_m = sdist * 1.496e+11  # [au] -> [m]
-# sun = rh.sph2cart(sun_theta, sun_az)
-# print(sun)
-# inc = rh.get_local_inc(ground[None, None, :], sun[None, None, :])
-# print(np.degrees(np.arccos(fac_cinc)), inc)
+sun_az, sun_theta = np.radians(obs[cx, cy, :2])
+print("sun (theta, az):", np.degrees((sun_theta, sun_az)))
+# sdist = obs[cx, cy, 5] # +m3.get_solar_dist(basename)
+# sdist_m = sdist * 1.496e+11  # [au] -> [m]
+sun = rh.sph2cart(sun_theta, sun_az)
+print(sun)
+inc = rh.get_local_inc(ground[None, None, :], sun[None, None, :])
+print("Local inc:", inc)
 
 # %%
 # Plot i, e, g images
@@ -700,18 +698,19 @@ plt.show()
 
 # %%
 # BT vs wavelength
-btemps = re.btempw(wl_all, emission)
+wl_xr = rh.np2xr(wl_all, ["wavelength"], [wl_all])
+btemps = re.btempw(wl_xr, emission).mean(("lat", "lon"))
 T_wl = add_wls_diviner(Tdiv)
 tloc = m3.get_m3_tloc(obs)
 
 f, ax = plt.subplots()
 left = btemps
-c_bright = btemps[10:20, 5:20]
-c_dark = btemps[28:32, 5:16]
-right = btemps[35:]
+# c_bright = btemps[10:20, 5:20]
+# c_dark = btemps[28:32, 5:16]
+# right = btemps[35:]
 
 # rp.m3_spec(rad, ax=ax)
-rp.m3_spec(left, wls=wl_all, ax=ax, label="rough")
+# rp.m3_spec(left, wls=wl_all, ax=ax, label="rough")
 # rp.m3_spec(c_bright, wls=wl_all, ax=ax, label='crater illum')
 # rp.m3_spec(c_dark, wls=wl_all, ax=ax, label='crater shadow')
 # rp.m3_spec(right, wls=wl_all, ax=ax, label='right')

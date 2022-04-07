@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.12.0
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
 #     name: python3
@@ -22,6 +22,7 @@ from roughness import helpers as rh
 from roughness import emission as re
 from roughness import plotting as rp
 
+tlookup = "/home/ctaiudovicic/projects/MiscDebris/data/220319_temp_table.nc"
 
 wl_arr = np.logspace(0, 2, 300)  # [microns]
 wls = xr.DataArray(wl_arr, coords={"wavelength": wl_arr})
@@ -56,12 +57,14 @@ def plot_re(
     f, ax = plt.subplots(2, figsize=(8, 6), sharex=True)
     geom = (sun_theta, sun_az, sc_theta, sc_az)
     for rms in rms_arr:
-        remiss = re.rough_emission_eq(
-            geom, wls, rms, albedo, emiss, solar_dist, True
+        # remiss = re.rough_emission_eq(
+        # geom, wls, rms, albedo, emiss, solar_dist, True
+        # )
+        remiss = re.rough_emission_lookup(
+            geom, wls, rms, albedo, 0, False, None, tlookup
         )
-        temiss = re.btempw(wls, remiss)
         ax[0].semilogx(wls, remiss, label=f"RMS={rms}")
-        btemp = re.btempw(wls, remiss)
+        btemp = re.btempw(wls, re.mrad2cmrad(remiss))
         ax[1].semilogx(wls, btemp)
     ax[0].legend()
     #     ax[1].set_ylim(-40, 5)
@@ -100,42 +103,42 @@ def plot_rad(
     facet_inc = np.degrees(np.arccos(cinc))
     albedo_array = re.get_albedo_scaling(facet_inc, albedo)
     rad_illum = re.get_emission_eq(cinc, albedo_array, emiss, solar_dist)
-    rad_illum += re.get_reradiation(
-        cinc,
-        facet_theta,
-        albedo,
-        emiss,
-        solar_dist,
-        rad_illum[0, 0],
-        albedo_array[0, 0],
-    )
+
     temp_illum = re.get_temp_sb(rad_illum)
     temp0 = temp_illum[0, 0]  # Temperature of level surface facet
 
     # Compute temperatures for shadowed facets (Josh approximation)
     temp_shade = re.get_shadow_temp(sun_theta, sun_az, temp0)
-    facet_emission_table = re.emission_2component(
+    emission_table = re.emission_2component(
         wls, temp_illum, temp_shade, shadow_table
     )
+    print(rad_illum.shape, emission_table.shape)
+    emission_table += re.get_reradiation_jb(emission_table, 0.12, 0.95)
 
-    #     view_table = rn.get_view_table(rms, sc_theta, sc_az)
-    #     facet_emission_table = facet_emission_table * view_table
-    weighted_emission = facet_emission_table * rn.get_facet_weights(
-        rms, sun_theta
-    )
+    view_weight = rn.get_view_table(rms, sc_theta, sc_az, True)
+    facet_weight = rn.get_facet_weights(rms, sun_theta)
 
-    rough_emission = weighted_emission.sum(dim=("az", "theta"))
+    total_weights = view_weight * facet_weight
+    norm_weights = total_weights / total_weights.sum()
+
+    rough_emission = re.emission_spectrum(emission_table, norm_weights)
+
     tmax = re.get_temp_sb(rad_illum.max().values)
 
-    p = facet_emission_table.sel(az=270).plot.line(
+    p = emission_table.sel(az=270).plot.line(
         x="wavelength", add_legend=False, ls=":"
     )
-    print(value_at_diviner_channels(rough_emission))
+    print(value_at_diviner_channels(rough_emission).values)
     plt.plot(wls, rough_emission, "-", lw=2, label="rough")
-    plt.plot(wls, re.bbrw(wls, tmax), "r--", label=f"Tmax   : {tmax:.0f} K")
+    plt.plot(
+        wls,
+        re.cmrad2mrad(re.bbrw(wls, tmax)),
+        "r--",
+        label=f"Tmax   : {tmax:.0f} K",
+    )
     #     plt.plot(wls, re.bbrw(wls, temp_shade), 'b--', label=f'Tshadow: {temp_shade:.0f} K')
     plt.legend()
-    plt.xscale("log")
+    # plt.xscale("log")
     plt.show()
 
 

@@ -65,7 +65,7 @@ def make_los_table(
     if fout == FLOOKUP:
         factors = make_scale_factors(zsurf, rmss, default=True)
     elif fout is not None:
-        f_sf = Path(fout).with_suffix("_scale_factors.npy")
+        f_sf = Path(fout).stem + "_scale_factors.npy"
         factors = make_scale_factors(zsurf, rmss, fout=f_sf)
     else:
         factors = make_scale_factors(zsurf, rmss)

@@ -336,7 +336,7 @@ def build_jupyter_notebooks(nbpath=cfg.EXAMPLES_DIR):
     """Build Jupyter notebooks using Jupytext."""
     print("Setting up Jupyter notebooks")
     for nb_py in nbpath.rglob("*.py"):
-        fout = nb_py.with_suffix(".ipynb")
+        fout = nb_py.stem + ".ipynb"
         if fout.exists():
             print(f"Skipping existing notebook {fout}")
         else:
