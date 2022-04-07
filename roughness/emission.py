@@ -51,19 +51,17 @@ def rough_emission_lookup(
 
     if rerad:
         # emission_table += get_reradiation_lookup(emission_table, albedo)
-        emission_table += get_reradiation_jb(emission_table, 0.12, 0.95)
+        t_flat = get_temp_table(tloc, albedo, lat, tlookup).sel(theta=0, az=0)
+        emission_table += get_reradiation_jb(
+            emission_table, t_flat, 0.12, 0.95
+        )
 
-    # Weight each facet by its probability of being visible from (sc theta, az)
-    #   weighted=True also weights by cos(angle) to view direction
-    view_weight = rn.get_view_table(rms, sc_theta, sc_az, True, flookup)
+    # Weight each facet by its prob of occurring and being visible from sc
+    weights = rn.get_weight_table(rms, sun_theta, sc_theta, sc_az, flookup)
 
-    # Weight each facet by its probability of occurrance
-    facet_weight = rn.get_facet_weights(rms, sun_theta, flookup)
-
-    total_weights = view_weight * facet_weight
-    norm_weights = total_weights / total_weights.sum()
-
-    rough_emission = emission_spectrum(emission_table, norm_weights)
+    weights = weights.interp_like(emission_table)
+    weights = weights / weights.sum()  # TODO: check this
+    rough_emission = emission_spectrum(emission_table, weights)
     return rough_emission
 
 
@@ -176,13 +174,9 @@ def rough_emission_eq(
     )
 
     # Weight each facet by its probability of occurrance
-    facet_weights = rn.get_facet_weights(rms, sun_theta, flookup)
-
-    # Weight each facet by its probability of being observed (sc theta, az)
-    view_weights = rn.get_view_table(rms, sc_theta, sc_az, flookup)
-    weight_table = facet_weights * view_weights
-
-    rough_emission = emission_spectrum(emission_table, weight_table)
+    weights = rn.get_weight_table(rms, sun_theta, sc_theta, sc_az, flookup)
+    weights = weights / weights.sum()  # TODO: check this
+    rough_emission = emission_spectrum(emission_table, weights)
     return rough_emission
 
 
@@ -304,10 +298,12 @@ def emission_spectrum(emission_table, weight_table=None):
     """
     Return emission spectrum as weighted sum of facets in emission_table.
 
+    Weight_table must have same slope, az coords as emission_table.
+
     Parameters
     ----------
-    rad_table (xr.DataArray): Table of radiance at each facet
-    flookup (str): Table of facet weights
+    emission_table (xr.DataArray): Table of radiance at each facet
+    weight_table (xr.DataArray): Table of facet weights
     """
     if weight_table is None and isinstance(emission_table, xr.DataArray):
         weight_table = 1 / (len(emission_table.az) * len(emission_table.theta))
@@ -354,12 +350,12 @@ def get_reradiation_lookup(rad_table, albedo=0.12):
     return rad_table
 
 
-def get_reradiation_jb(rad_table, albedo=0.12, emiss=0.95):
+def get_reradiation_jb(rad_table, t_flat, albedo=0.12, emiss=0.95):
     """
     Return emission incident on surf_theta from re-radiating adjacent level
     surfaces using JB downwelling approximation.
     """
-    rad_flat = rad_table.sel(theta=0, az=0)
+    rad_flat = bbrw(rad_table.wavelength, t_flat)
     rerad_emitted = rad_flat * emiss
     rerad_absorbed = (rad_table.theta / 180) * albedo * rerad_emitted
     return rerad_absorbed

@@ -27,18 +27,18 @@ def get_shadow_table(rms, sun_theta, sun_az, los_lookup=FLOOKUP):
     return 1 - get_los_table(rms, sun_theta, sun_az, los_lookup, "prob")
 
 
-def get_view_table(rms, sc_theta, sc_az, weighted=True, los_lookup=FLOOKUP):
+def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
     """
-    Return probability that each facet is observed from (sc_theta, sc_az)
-    on a surface with rms roughness. If weighted is True, the probability is
-    weighted by the cosine of the angle between the facet and view direction.
+    Return probability each facet is observed from (sc_theta, sc_az).
+
+    Weights each facet bin by cos(angle) between facet and view vector. Facets
+    oriented at > 90 deg to view vector are set to NaN.
 
     Parameters
     ----------
     rms_slope (num): Root-mean-square slope of roughness [deg]
     sc_theta (num or array): Spacecraft emission angle [deg]
     sc_az (num or array): Spacecraft azimuth [deg]
-    weighted (bool): Whether to weight by cos(angle) between facet and view
     los_lookup (path or 4D array): Path to file or los lookup array
 
     Returns
@@ -46,12 +46,58 @@ def get_view_table(rms, sc_theta, sc_az, weighted=True, los_lookup=FLOOKUP):
     view_prob (2D array): View probability table (dims: az, theta)
     """
     view = get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
-    if weighted:
-        view *= get_view_weights(view.theta, view.az, sc_theta, sc_az)
-    return view
+    view *= get_view_cos_theta(view.theta, view.az, sc_theta, sc_az)
+    return view.where(view > 0)  # drop negative (angled away from sc)
 
 
-def get_view_weights(facet_theta, facet_az, sc_theta, sc_az):
+def get_facet_table(rms, inc, los_lookup=FLOOKUP):
+    """
+    Return probability of each facet occurring given an rms rough at solar inc.
+
+    Solar inc is required because very oblique angles may lower the number of
+    valid facets used to compute the los_lookup from DEM (see make_los_table).
+
+    Parameters
+    ----------
+    rms (num): Root-mean-square surface theta describing roughness [deg]
+    inc (num or array): Inclination angle [deg]
+    los_lookup (path or xarray): Los lookup xarray or path to file.
+
+    Returns
+    -------
+    prob (2D array): Binned probability of facet occurring (dims: az, theta).
+    """
+    total = get_los_table(rms, inc, None, los_lookup, "total")
+    # If rms=0 (or < first theta), assume surface is flat
+    if rms < total.theta.values[1]:
+        prob = xr.zeros_like(total)
+        prob.loc[{"theta": 0}] = 1  # flat => prob=1 for all theta=0
+    else:
+        prob = total / total.sum()  # .sum skips NaN
+    return prob
+
+
+def get_weight_table(rms, sun_theta, sc_theta, sc_az, flookup=None):
+    """
+    Return probability of each facet existing and being visible from sc.
+
+    Parameters
+    ----------
+    rms (arr): RMS roughness [degrees]
+    sun_theta (arr): Sun zenith angle [degrees]
+    sc_theta (arr): Sc zenith angle [degrees]
+    sc_az (arr): Sc azimuth angle [degrees]
+    flookup (path or xarray): Facet lookup xarray or path to file.
+    """
+    # Get probability each facet is in view, weighted by cos(i) to sc vector
+    view_table = get_view_table(rms, sc_theta, sc_az, flookup)
+    # Get probability each facet exists at given rms
+    facet_weight = get_facet_table(rms, sun_theta, flookup)
+    # Final probability is product of view and facet probabilities
+    return view_table * facet_weight
+
+
+def get_view_cos_theta(facet_theta, facet_az, sc_theta, sc_az):
     """
     Return weighting factor for surface facets (facet_theta, facet_az) as
     viewed from (sc_theta, sc_az) as cos(angle) between facet and view vectors.
@@ -69,28 +115,6 @@ def get_view_weights(facet_theta, facet_az, sc_theta, sc_az):
     facet_cart = rh.sph2cart(*np.meshgrid(ft, fa))
     sc_cart = rh.sph2cart(st, sa)
     return rh.element_dot(facet_cart, sc_cart)
-
-
-def get_facet_weights(rms, inc, los_lookup=FLOOKUP):
-    """
-    Return the weighted probability of each facet occurring given an rms rough
-    surface facets in the line of sight of (theta, az).
-
-    Parameters
-    ----------
-    rms (num): Root-mean-square surface theta describing roughness [deg]
-    inc (num or array): Inclination angle [deg]
-    los_lookup (path or xarray): Los lookup xarray or path to file.
-
-    Returns
-    -------
-    weights (2D array): Weighted probability table that sums to 1.
-    """
-    tot = get_table_xarr([rms, inc], ["rms", "inc"], None, "total", los_lookup)
-    if rms <= tot.theta.values[1]:
-        tot = xr.zeros_like(tot)
-        tot.loc[{"theta": 0}] = 1
-    return tot / tot.sum(skipna=True)
 
 
 def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):

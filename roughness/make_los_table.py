@@ -65,8 +65,8 @@ def make_los_table(
     if fout == FLOOKUP:
         factors = make_scale_factors(zsurf, rmss, default=True)
     elif fout is not None:
-        fout = Path(fout).with_suffix("_scale_factors.npy")
-        factors = make_scale_factors(zsurf, rmss, fout=fout)
+        f_sf = Path(fout).with_suffix("_scale_factors.npy")
+        factors = make_scale_factors(zsurf, rmss, fout=f_sf)
     else:
         factors = make_scale_factors(zsurf, rmss)
 
@@ -284,7 +284,7 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, write=True, default=False):
     n: Side length of synthetic surface. Default=10000
     H: Hurst exponent.
     qr: Rolloff wavelength in units of q (wavevector; 1/m).
-    fout (str): Path to write z surface.
+    fout (str): Path to write z surface (.npy).
 
     Returns
     -------

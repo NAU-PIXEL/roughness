@@ -1,6 +1,8 @@
 """Helpers for Diviner data."""
+from functools import lru_cache
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import xarray as xr
 import rasterio as rio
 import roughness.helpers as rh
@@ -14,6 +16,11 @@ DIV_WL1 = np.array([0.0001, 8.075, 8.40, 13, 25, 50, 100])
 DIV_WL2 = np.array([8.075, 8.40, 13, 25, 50, 100, 500])
 DIV_TMIN = np.array([190, 190, 180, 95, 60, 40, 0])
 ITERS = np.array([5, 5, 6, 10, 16, 24, 56])
+FILT_SCALE = np.array(
+    [1.0005, 1.0003, 1.0010, 1.0018, 1.00600, 0.71939, 0.79358]
+)
+FDIV_T2R = "/home/ctaiudovicic/projects/roughness/tmp/div_t2r.txt"
+FDIV_FILT = "/nfs/data/josh/home/projects/diviner/diviner_filter_functions.hdf"
 
 
 def lev4hourly2xr(
@@ -237,11 +244,73 @@ def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
     for i in range(7)[::-1]:  # Start at C9 and work backwards
         if divbt[i] > tmin[i]:
             temp[i] = divbt[i]
-        else:
+        elif divbt[i] > 0:
             temp[i] = temp[i + 1]  # Use bt from next channel over
+        else:
+            temp[i] = np.nan
         rad[i] = SIGMA * temp[i] ** 4 * cfst(temp[i], wl1[i], wl2[i], iters[i])
     tbol = (np.sum(rad) / SIGMA) ** 0.25
     return tbol
+
+
+def load_div_filters(
+    fdiv_filt=FDIV_FILT, scale=True, wlunits=True, bands=DIV_C
+):
+    """
+    Return Diviner filter functions
+    """
+    hdf = xr.load_dataset(fdiv_filt)
+    wn = hdf.xaxis.values.squeeze()
+    data = hdf.data.squeeze().values
+    data = data.reshape(data.shape[1], data.shape[0])  # reads wrong axis order
+    div_filt = xr.DataArray(
+        data,
+        name="Normalized Response",
+        dims=["wavenumber", "band"],
+        coords={"band": bands, "wavenumber": wn},
+    )
+    if scale:
+        div_filt = div_filt * FILT_SCALE[np.newaxis, :]
+    if wlunits:
+        div_filt.coords["wavelength"] = 10000 / div_filt.wavenumber
+        div_filt = div_filt.swap_dims({"wavenumber": "wavelength"})
+    return div_filt
+
+
+@lru_cache(1)
+def load_div_t2r(fdiv_t2r=FDIV_T2R, tmin=10, tmax=None):
+    """
+    Return Diviner temperature to radiance lookup table.
+    """
+    t2r = pd.read_csv(fdiv_t2r, sep="\s+", index_col=0, header=0)
+    t2r = xr.DataArray(t2r, dims=["temperature", "band"], name="radiance")
+    return t2r.sel(temperature=slice(tmin, tmax), drop=True)
+
+
+def divfilt_rad(wnrad, div_filt):
+    """
+    Return radiance of Diviner bands (convolve rad with Diviner filter funcs).
+    """
+    filtered = div_filt * wnrad  # Must both have wavelength coord
+    return filtered.sum(dim="wavelength") * 2
+
+
+def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
+    """
+    Return brightness temperatures from Diviner radiance (e.g. from div_filt).
+    """
+    t2r = load_div_t2r(fdiv_t2r)  # cached lookup
+    dbt = np.zeros(len(divrad.band.values))
+    for i, band in enumerate(divrad.band.values):
+        # Interpolate lookup to convert radiance to brightness temperature
+        dbt[i] = np.interp(
+            divrad.sel(band=band),  # desired x-coords (radiance)
+            t2r.sel(band=band),  # actual x-coords (radiance)
+            t2r.temperature,  # actual y-coords (temperature)
+            left=np.nan,
+            right=np.nan,
+        )
+    return dbt
 
 
 def cfst(bt, wl1, wl2, n_iter=100):

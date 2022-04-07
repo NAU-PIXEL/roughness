@@ -439,7 +439,7 @@ def inc_to_tloc(inc, az):
     return tloc
 
 
-def tloc_to_inc(tloc, lat=0):
+def tloc_to_inc(tloc, lat=0, az=False):
     """
     Return the solar incidence angle given the local time in hrs.
 
@@ -455,13 +455,39 @@ def tloc_to_inc(tloc, lat=0):
     inc: (float)
         Solar incidence (0, 90) [deg]
     """
-    latr = np.radians(lat)
-    hour_angle = np.radians(15 * (tloc - 12))  # (morning is -; afternoon is +)
-    inc = np.arccos(np.cos(hour_angle) * np.cos(latr))
-    # az = np.arccos(-np.cos(hour_angle) * np.sin(latr) / np.cos(np.pi/2 - inc))
-    # if hour_angle > 0:
-    #     az = 2 * np.pi - az
-    return np.rad2deg(inc)
+    latr = np.deg2rad(lat)
+    hr_angle = np.deg2rad(15 * (tloc - 12))  # (morning is -; afternoon is +)
+    inc = np.rad2deg(np.arccos(np.cos(hr_angle) * np.cos(latr)))
+    if az:
+        az = np.arctan2(np.sin(hr_angle), -np.sin(latr) * np.cos(-hr_angle))
+        az = (np.rad2deg(az) + 360) % 360  # [0, 360) from N
+        return inc, az
+    return inc
+
+
+def get_inc_az_from_subsolar(lon, lat, sslon, sslat):
+    """
+    Return inc and az angle at (lat, lon) given subsolar point (sslat, sslon).
+
+    From calculator at https://the-moon.us/wiki/Sun_Angle
+    """
+    dlon = np.deg2rad(lon - sslon)
+    lon, lat, sslon, sslat = (
+        np.deg2rad(lon),
+        np.deg2rad(lat),
+        np.deg2rad(sslon),
+        np.deg2rad(sslat),
+    )
+    inc = np.arccos(
+        np.sin(sslat) * np.sin(lat)
+        + np.cos(sslat) * np.cos(lat) * np.cos(dlon)
+    )
+    az = np.arctan2(
+        np.cos(sslat) * np.sin(-dlon),
+        np.cos(lat) * np.sin(sslat)
+        - np.sin(lat) * np.cos(sslat) * np.cos(-dlon),
+    )
+    return np.rad2deg(inc), np.rad2deg(az)
 
 
 # Linear algebra

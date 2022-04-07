@@ -1,5 +1,6 @@
 """Helpers for plotting roughness tables and arrays."""
 import numpy as np
+import xarray as xr
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import roughness.m3_correction as m3
@@ -22,6 +23,7 @@ def plot_slope_az_table(
     proj=None,
     vmin=None,
     vmax=None,
+    extent=None,
     **kwargs,
 ):
     """
@@ -49,11 +51,21 @@ def plot_slope_az_table(
         vmin = np.nanmin(table)
     if vmax is None:
         vmax = np.nanmax(table)
+    if extent is None:
+        extent = (0, 90, 360, 0)
+    if isinstance(table, (xr.DataArray, xr.Dataset)):
+        table = table.transpose("az", "theta")
+        extent = (
+            table.theta.min(),
+            table.theta.max(),
+            table.az.min(),
+            table.az.max(),
+        )
 
     if proj == "polar":
         # Define polar coords R ~ slope, Theta ~ azimuth
-        r = np.linspace(0, 90, table.shape[1])
-        theta = np.linspace(0, 360, table.shape[0])
+        r = np.linspace(*extent[:2], table.shape[1])
+        theta = np.linspace(*extent[2:], table.shape[0])
         R, Theta = np.meshgrid(r, theta)
         p = ax.pcolormesh(
             np.deg2rad(Theta),
@@ -74,8 +86,8 @@ def plot_slope_az_table(
     else:
         p = ax.imshow(
             table,
-            extent=(0, 90, 360, 0),
-            aspect=90 / 360,
+            extent=extent,
+            aspect=(extent[1] - extent[0]) / (extent[3] - extent[2]),
             cmap=CMAP_R if cmap_r else CMAP,
             vmin=vmin,
             vmax=vmax,
