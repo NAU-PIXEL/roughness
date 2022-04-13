@@ -10,7 +10,7 @@ from . import config as cfg
 from . import __version__
 
 # Line of sight helpers
-def lookup2xarray(lookups, rms_coords=None, inc_coords=None):
+def lookup2xarray(lookups, rms_coords=None, inc_coords=None, nodata=-999):
     """
     Convert list of default lookups to xarray.DataSet.
 
@@ -26,9 +26,9 @@ def lookup2xarray(lookups, rms_coords=None, inc_coords=None):
     longnames = cfg.LUT_LONGNAMES
     coords = get_lookup_coords(*lookups[0].shape)
     if rms_coords is not None:
-        coords[0] = rms_coords
+        coords[0] = np.array(rms_coords)
     if inc_coords is not None:
-        coords[1] = inc_coords
+        coords[1] = np.array(inc_coords)
     for i, lut in enumerate(lookups):
         # Make DataArray
         da = np2xr(lut, name=names[i], coords=coords)
@@ -39,7 +39,7 @@ def lookup2xarray(lookups, rms_coords=None, inc_coords=None):
             ds = da.to_dataset()
         else:
             ds[names[i]] = da
-    return ds
+    return ds.where(ds != nodata)
 
 
 def np2xr(arr, dims=None, coords=None, name=None, cnames=None, cunits=None):
@@ -336,7 +336,7 @@ def build_jupyter_notebooks(nbpath=cfg.EXAMPLES_DIR):
     """Build Jupyter notebooks using Jupytext."""
     print("Setting up Jupyter notebooks")
     for nb_py in nbpath.rglob("*.py"):
-        fout = nb_py.stem + ".ipynb"
+        fout = Path(nb_py).with_suffix(".ipynb")
         if fout.exists():
             print(f"Skipping existing notebook {fout}")
         else:
@@ -418,24 +418,48 @@ def get_local_az(ground, sun, sc):
     return az
 
 
-def inc_to_tloc(inc, az):
+# def inc_to_tloc(inc, az):
+#     """
+#     Convert solar incidence and az to decimal local time (in 6-18h).
+#     # TODO: fix lat
+
+#     Parameters
+#     ----------
+#     inc: (float)
+#         Solar incidence in degrees (0, 90)
+#     az: (str)
+#         Solar azimuth in degrees (0, 360)
+#     """
+#     if isinstance(az, np.ndarray):
+#         inc = inc.copy()
+#         inc[az < 180] *= -1
+#     elif az < 180:
+#         inc *= -1
+#     coinc = 90 + inc  # (-90, 90) -> (0, 180)
+#     tloc = 6 * coinc / 90 + 6  # (0, 180) -> (6, 18)
+#     return tloc
+
+
+def inc_to_tloc(inc, az, lat):
     """
     Convert solar incidence and az to decimal local time (in 6-18h).
 
     Parameters
     ----------
     inc: (float)
-        Solar incidence in degrees (0, 90)
-    az: (str)
-        Solar azimuth in degrees (0, 360)
+        Solar incidence in degrees [0, 90)
+    az: (float)
+        Solar azimuth in degrees [0, 360)
+    lat: (float)
+        Latitude in degrees [-90, 90)
     """
-    if isinstance(az, np.ndarray):
-        inc = inc.copy()
-        inc[az < 180] *= -1
-    elif az < 180:
-        inc *= -1
-    coinc = 90 + inc  # (-90, 90) -> (0, 180)
-    tloc = 6 * coinc / 90 + 6  # (0, 180) -> (6, 18)
+    inc, lat = np.deg2rad(inc), np.deg2rad(lat)
+    hr_angle = np.arccos(np.cos(inc) / np.cos(lat))
+    if az % 360 < 180:
+        hr_angle *= -1
+    # hr_angle = np.atleast_1d(hr_angle)
+    # hr_angle[az%360 < 180] *= -1 # (morning is -; afternoon is +)
+    tloc = 12 + np.rad2deg(hr_angle) / 15
     return tloc
 
 

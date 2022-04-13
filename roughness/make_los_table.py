@@ -8,6 +8,8 @@ from .config import (
     FZ_FACTORS,
     FLOOKUP,
     VERSION,
+    RMSS,
+    INCS,
     MIN_FACETS,
     DEMSIZE,
     AZ0,
@@ -18,37 +20,35 @@ lineofsight = rh.import_lineofsight()  # Imports FORTRAN lineofsight module
 
 def make_default_los_table():
     """Return default los table."""
-    rmss, incs, _, _ = rh.get_lookup_bins()
-
     # Load in the synthetic DEM and scale factors
     zsurf = make_zsurf(DEMSIZE, default=True)
-    return make_los_table(zsurf, rmss, incs, fout=FLOOKUP)
+    return make_los_table(zsurf, RMSS, INCS, thresh=MIN_FACETS, fout=FLOOKUP)
 
 
 def make_los_table(
-    zsurf, rmss, incs, naz=36, ntheta=45, thresh=MIN_FACETS, az0=AZ0, fout=None
+    zsurf, rmss, incs, naz=36, ntheta=45, thresh=1, az0=AZ0, fout=None
 ):
     """
     Generate line of sight probability table with dims (rms, inc, slope, az).
 
     Tables are generated using raytracing on a synthetic Gaussian surface with
     a range of RMS slopes and observed from a range of solar inc angles. Final
-    los_lookup table is binned by facet slope/azimuth:
+    los_prob table is binned by facet slope/azimuth:
 
-    - los_lookup == 1: All facets in line of sight (i.e. visible / illuminated)
-    - los_lookup == 0: No facets in line of sight (i.e. not visible / shadowed)
-    - los_lookup == np.nan: Fewer than threshold facets observed in bin
+    - los_prob == 1: All facets in line of sight (i.e. visible / illuminated)
+    - los_prob == 0: No facets in line of sight (i.e. not visible / shadowed)
+    - los_prob == np.nan: Fewer than threshold facets observed in bin
 
     Parameters
     ----------
     zsurf (n x n arr): Artifical z surface with self-affine roughness.
-    rmss (arr): RMS slope values
-    incs (arr): Solar incidence angle values [degrees]
-    naz: Number of facet azimuth bins. Default=36
-    ntheta: Number of facet slope bins. Default=45
-    thresh (int): Minimum number of facets to do binning, else nan
+    rmss (arr): RMS slope of surface to raytrace
+    incs (arr): Solar incidence angles to raytrace [degrees]
+    naz (int): Number of facet azimuth bins. Default=36
+    ntheta (int): Number of facet slope bins. Default=45
+    thresh (int): Min facets in bin to assign probability. Default=1
     az0 (float): Raytrace azimuth from north in degrees. Default=270
-    fout (str): Path to write table with xarray compatible extension (e.g. .nc).
+    fout (str): Path to write table with xarray extension (e.g. ".nc").
 
     Returns
     -------
@@ -57,6 +57,8 @@ def make_los_table(
         los: Number of facets in line of sight in bin
         prob: Fraction of facets in line of sight in bin (los/total)
     """
+    if thresh < 1:
+        raise ValueError("Thresh must be >= 1 to assign probability")
     # Get line of sight lookup coordinate arrays
     azbins, slopebins = rh.get_facet_bins(naz, ntheta)
 
@@ -70,73 +72,71 @@ def make_los_table(
     else:
         factors = make_scale_factors(zsurf, rmss)
 
-    # Init total and line of sight facet arrays binned by slope/azim
-    tot_facets = np.full((len(rmss), len(incs), naz, ntheta), np.nan)
+    # Init total and line of sight facet arrays with nodata value
+    # Dtype int since total and los facets are counts
+    tot_facets = np.full((len(rmss), len(incs), naz, ntheta), -999, dtype=int)
     los_facets = np.copy(tot_facets)
 
-    for r, rms in enumerate(rmss):
-        # Flat surface => all facets in line of sight at any inc
-        if rms == 0:
-            # Cludge: at rms=0 most facets are undefined, but we expect all to
-            # be visible. Set to threshold to ensure los_lookup == 1
-            tot_facets[r, :, :, :] = thresh
-            los_facets[r, :, :, :] = thresh
-            continue
-
+    # Rms=0 is flat and inc=0 is nadir (all los), inc=90 is horizon (no los)
+    # Skip raytracing these and handle below
+    rmss_sub = rmss[rmss > 0]
+    incs_sub = incs[(incs > 0) & (incs < 90)]
+    for r, rms in enumerate(rmss_sub):
         # Scale the dem to the prescirbed RMS slope and get slope, azim arrays
-        dem = zsurf * factors[r]
+        dem = scale_dem(zsurf, rms, factors, rmss)
         slope, azim = get_slope_aspect(dem)
+        azim = (azim + 270) % 360  # TODO: cludge, raytrace is rotating az
 
         # Get binned counts of total facets in dem (doesn't change with inc)
         tot_facets[r, :, :, :] = bin_slope_azim(azim, slope, azbins, slopebins)
-        for i, inc in enumerate(incs):
-            # Nadir view => all facets in line of sight
-            if inc == 0:
-                los_facets[r, i, :, :] = tot_facets[r, i, :, :]
-                continue
-
+        for i, inc in enumerate(incs_sub):
             # Run ray trace to compute dem facets in line of sight
-            los = raytrace(dem, inc, az0)
-
-            # Remove buffer before which we may have missed some shadows
-            buf = get_dem_los_buffer(dem, inc)
-            los = los[:, buf + 1 :]
-            azim_buf = azim[:, buf + 1 :]
-            slope_buf = slope[:, buf + 1 :]
-
-            # # Get slope and azim in los and past buffer
-            # los_buf = los * ~in_buf
-            # azim_los_buf = azim[los_buf]
-            # slope_los_buf = slope[los_buf]
+            # Buffered extends dem if needed to correct for longest shadow
+            los = buffered_raytrace(dem, inc, az0)
 
             # Get binned counts of facets in los
             los_facets[r, i, :, :] = bin_slope_azim(
-                azim_buf[los], slope_buf[los], azbins, slopebins
+                azim[los], slope[los], azbins, slopebins
             )
-            # If buffer, there will be fewer tot_facets, so we need to compute
-            if buf > 0:
-                tot_facets[r, i, :, :] = bin_slope_azim(
-                    azim_buf, slope_buf, azbins, slopebins
-                )
+
             # Report progress
-            ppct = 100 * (r * len(incs) + i + 1) / (len(rmss) * len(incs))
+            ni, nr = len(incs_sub), len(rmss_sub)
+            ppct = (r * ni + (i + 1)) / (ni * nr) * 100
             pbar = "=" * int(ppct // 5)
-            print(f"Raytracing [{pbar:20s}] {ppct:.2f}%", end="\r", flush=True)
+            print(f"Raytracing [{pbar:20s}] {ppct:.2f}", end="\r", flush=True)
 
     print("\nGenerating lineofsight lookup table...")
-    # If bins have fewer than threshold total facets -> set outputs to nan
-    tot_facets[tot_facets < thresh] = np.nan
-    los_facets[tot_facets < thresh] = np.nan
 
-    # los_lookup is fraction of facets in lineofsight / total facets in bin
-    with np.errstate(
-        divide="ignore", invalid="ignore"
-    ):  # Suppress div warning
-        los_lookup = los_facets / tot_facets
+    # Setting inc=0 to 1 and inc=90 to 0 smooths interpolation of los_prob
+    inc_0 = np.where(incs == 0)
+    los_facets[:, inc_0] = tot_facets[:, inc_0]
+    los_facets[:, np.where(incs == 90)] = 0
+
+    # Set bins with fewer than threshold facets to nodata (prevents div 0)
+    tot_facets[tot_facets < thresh] = -999
+
+    # Compute los_prob: fraction of facets in lineofsight / total facets in bin
+    los_prob = los_facets / tot_facets
+
+    # Clean up nodata values and make consistent across all lookups
+    nodata = (tot_facets == -999) | (los_facets == -999)
+
+    # Clean up jagged edges caused by bin count at theta being close to thresh
+    # If any az bin for a given theta slice is nan, set all az at theta to nan
+    rms_nan, inc_nan, theta_nan = np.where(np.any(nodata, axis=2))
+    tot_facets[rms_nan, inc_nan, :, theta_nan] = -999
+    los_facets[rms_nan, inc_nan, :, theta_nan] = -999
+    los_prob[rms_nan, inc_nan, :, theta_nan] = -999
+
+    # Setting rms=0 (flat surface) to 1 smooths interpolation of los_prob
+    rms_0 = np.where(rmss == 0)
+    tot_facets[rms_0, :, :, 0] = 1  # One facet at each az in 1st slope bin
+    los_facets[rms_0, :, :, 0] = 1  # Each flat facet is in los
+    los_prob[rms_0, :, :, 0] = 1  # Each flat facet has 100% chance of los
 
     # Convert lookups to xarray
-    lookups = (tot_facets, los_facets, los_lookup)
-    ds = rh.lookup2xarray(lookups, rmss, incs)
+    lookups = (tot_facets, los_facets, los_prob)
+    ds = rh.lookup2xarray(lookups, rmss, incs, nodata=-999)
     ds.attrs["description"] = "Roughness line of sight lookup DataSet."
     ds.attrs["version"] = VERSION
     ds.attrs["demsize"] = zsurf.shape
@@ -146,130 +146,6 @@ def make_los_table(
         ds.to_netcdf(fout, mode="w")
         print(f"Wrote {fout}")
     return ds
-
-
-# def make_los_table(
-#     nrms=10,
-#     ninc=10,
-#     naz=36,
-#     ntheta=45,
-#     threshold=25,
-#     demsize=10000,
-#     az0=270,
-#     fout="",
-#     write=True,
-#     default=False,
-# ):
-#     """
-#     Generate line of sight probability table with dims (rms, inc, slope, az).
-
-#     Tables are generated using raytracing on a synthetic Gaussian surface with
-#     a range of RMS slopes and observed from a range of solar inc angles. Final
-#     los_lookup table is binned by facet slope/azimuth:
-
-#     - los_lookup == 1: All facets in line of sight (i.e. visible / illuminated)
-#     - los_lookup == 0: No facets in line of sight (i.e. not visible / shadowed)
-#     - los_lookup == np.nan: Fewer than threshold facets observed in bin
-
-#     Parameters
-#     ----------
-#     nrms: Number of RMS slopes. Fixed value for now.
-#     ninc: Number of incidence Angles. Default=18
-#     naz: Number of azimuth bins. Default=36
-#     ntheta: Number of slope bins. Default=45
-#     threshold (int): Minimum number of valid facets to do binning, else nan
-
-#     Returns
-#     -------
-#     No values are returned. Three tables are saved in roughness data directory.
-#     total_facets_4D.npy: Number of facets in slope/azim bin.
-#     los_facets_4D.npy: Number of facets in line of sight in slope/azim bin.
-#     los_lookup_4D.npy: Probability of facets in line of sight per slope/azim bin.
-#     """
-#     if fout == "":
-#         if default:
-#             fout = FLOOKUP
-#         else:
-#             args = f"{nrms}_{ninc}_{naz}_{ntheta}_{threshold}_{demsize}"
-#             fout = DATA_DIR / f"lookup_{args}.nc"
-#     # Get line of sight lookup coordinate arrays
-#     rms_arr, incs, _, _ = rh.get_lookup_coords(nrms, ninc)
-#     azbins, slopebins = rh.get_facet_bins(naz, ntheta)
-
-#     # Load in the synthetic DEM and scale factors
-#     zsurf = make_zsurf(demsize, default=default, write=write)
-#     factors = make_scale_factors(zsurf, rms_arr, default=default, write=write)
-
-#     # Init total and line of sight facet arrays binned by slope/azim
-#     tot_facets = np.full((nrms, ninc, naz, ntheta), np.nan)
-#     los_facets = np.copy(tot_facets)
-
-#     for r, rms in enumerate(rms_arr):
-#         # Flat surface => all facets in line of sight at any inc
-#         if rms == 0:
-#             # Cludge: at rms=0 most facets are undefined, but we expect all to
-#             # be visible. Set to threshold to ensure los_lookup == 1
-#             tot_facets[r, :, :, :] = threshold
-#             los_facets[r, :, :, :] = threshold
-#             continue
-
-#         # Scale the dem to the prescirbed RMS slope and get slope, azim arrays
-#         dem = zsurf * factors[r]
-#         slope, azim = get_slope_aspect(dem)
-#         slope = slope.flatten()
-#         azim = azim.flatten()
-
-#         # Get binned counts of total facets in dem (doesn't change with inc)
-#         tot_facets[r, :, :, :] = bin_slope_azim(azim, slope, azbins, slopebins)
-#         for i, inc in enumerate(incs):
-#             # Nadir view => all facets in line of sight
-#             if inc == 0:
-#                 los_facets[r, i, :, :] = tot_facets[r, i, :, :]
-#                 continue
-
-#             # Run ray trace to compute dem facets in line of sight
-#             los = raytrace(dem, inc, az0).flatten()
-
-#             # Get buffer beyond which raytrace breaks down due to finite dem
-#             in_buf = get_dem_los_buffer(dem, inc).flatten()
-
-#             # Get only slope and azim in los and not in buffer
-#             los_buf = los * ~in_buf
-#             azim_los_buf = azim[los_buf]
-#             slope_los_buf = slope[los_buf]
-
-#             # Get binned counts of remaining facets
-#             los_facets[r, i, :, :] = bin_slope_azim(
-#                 azim_los_buf, slope_los_buf, azbins, slopebins
-#             )
-#             # Report progress
-#             ppct = (100 * (r * ninc + i) / (nrms * ninc)) + 1
-#             pbar = "=" * int(ppct // 5)
-#             print(f"Raytracing [{pbar:20s}] {ppct:.2f}%", end="\r", flush=True)
-
-#     print("\nGenerating lineofsight lookup table...")
-#     # If bins have fewer than threshold total facets -> set outputs to nan
-#     tot_facets[tot_facets < threshold] = np.nan
-#     los_facets[tot_facets < threshold] = np.nan
-
-#     # los_lookup is fraction of facets in lineofsight / total facets in bin
-#     with np.errstate(
-#         divide="ignore", invalid="ignore"
-#     ):  # Suppress div warning
-#         los_lookup = los_facets / tot_facets
-
-#     # Convert lookups to xarray
-#     lookups = (tot_facets, los_facets, los_lookup)
-#     ds = rh.lookup2xarray(lookups)
-#     ds.attrs["description"] = "Roughness line of sight lookup DataSet."
-#     ds.attrs["version"] = VERSION
-#     ds.attrs["demsize"] = demsize
-#     ds.attrs["threshold"] = threshold
-#     ds.attrs["az0"] = az0
-#     if write:
-#         ds.to_netcdf(fout, mode="w")
-#         print(f"Wrote {fout}")
-#     return ds
 
 
 def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, write=True, default=False):
@@ -393,7 +269,7 @@ def make_scale_factors(
     """
     if not default:
         fout = rh.fname_with_demsize(
-            fout, f"{zsurf.shape[0]}_rmsmax_{rms_arr.max()}"
+            fout, f"{zsurf.shape[0]}_rmsmax_{max(rms_arr)}"
         )
         # Try to load scale factors and check they are correct length
         scale_factors = load_zsurf_scale_factors(fout)
@@ -407,7 +283,7 @@ def make_scale_factors(
     rms_derived = np.zeros_like(factors)
     i = 1  # rms=0 is factor=0 so we start at 1
     # Save RMS slope at each factor, end loop when we exceed max(rms_arr)
-    while rms_derived[i - 1] < rms_arr.max() and i < len(factors):
+    while rms_derived[i - 1] < max(rms_arr) and i < len(factors):
         # Compute z surface * factor and get RMS
         zsurf_new = zsurf * factors[i]
         rms_derived[i] = get_rms(get_slope_aspect(zsurf_new, get_aspect=False))
@@ -422,7 +298,52 @@ def make_scale_factors(
     return scale_factors
 
 
-def raytrace(dem, inc, azim):
+def scale_dem(dem, rms, scale_factors, rmss):
+    """
+    Scale a DEM by a set of scale factors.
+
+    Parameters
+    ----------
+    dem (n x n arr): DEM to scale.
+    rms (int): RMS value to scale to.
+    scale_factors (arr): Factors to scale dem by.
+    rmss (arr): RMS values corresponding to scale_factors.
+
+    Returns
+    -------
+    scaled_dem (n x n arr): DEM scaled to have rms roughness.
+    """
+    # Find the closest scale factor to the desired rms
+    i = np.argmin(np.abs(rmss - rms))
+    # Scale the dem by the scale factor
+    return dem * scale_factors[i]
+
+
+def buffered_raytrace(dem, inc, az=270):
+    """
+    Return line of sight array for dem, with left portion of dem repeated by
+    leftbuffer then removed from the output. This is intended to extend a
+    randomly rough dem to the west to correct for the longest shadow distance
+    possible in the raytrace (otherwise we undercount shadows).
+    """
+    # Compute buffer, left of which we may be missing shadows
+    buf = get_dem_los_buffer(dem, inc)
+    if az != 270:
+        raise ValueError("Az must be 270 for this func. Try normal raytrace()")
+
+    # Max buffer is dem width (if we need to double the dem, use a bigger one)
+    if buf > dem.shape[0]:
+        msg = (
+            f"Supplied {dem.shape} DEM is too small for raytracing "
+            + f"at inc={inc}. Use a DEM at least "
+            + f"{buf} pixels or specify smaller inc."
+        )
+        raise ValueError(msg)
+    los = raytrace(np.vstack((dem[:buf, :], dem)), inc, az)
+    return los[buf:, :]  # Remove left buffer and retranspose
+
+
+def raytrace(dem, inc, az=270):
     """
     Return line of sight boolean array of 2D dem viewed from (inc, azim).
 
@@ -431,20 +352,28 @@ def raytrace(dem, inc, azim):
     Parameters
     ----------
     dem (2D arr): Input DEM to ray trace where values are z-height.
-    inc (1D arr): Input vector incidence angle (0 is nadir).
-    azim (1D arr): Input vector azimuth angle (0 is North).
+    inc (1D arr): Input vector incidence angle [0, 90) where 0 is nadir.
+    az (1D arr): Input vector azimuth angle [0, 360) where 0 is North.
 
     Returns
     -------
     out (2D bool arr, dem.shape): True - in los; False - not in los
     """
     # Make an input array where all values are illuminated
-    los = np.ones_like(dem)
-    # If inc == 0 everything is illuminated. No point in calling function.
-    if inc != 0:
-        # Passing the proper inputs to the fortran module.
-        los = lineofsight.lineofsight(dem.flatten(), inc, azim, los)
-    return los.T.astype(bool)
+    los = np.ones_like(dem)  # , order='F')
+    cols, rows = los.shape
+    # If inc == 0 all illuminated, if inc >= 90 none illuminated
+    if inc == 0:
+        pass
+    elif inc >= 90:
+        los *= 0
+    else:
+        # Passing inputs to the fortran module
+        # TODO: weird transpose passing back/forth from fortran (works for now)
+        los = lineofsight.lineofsight(
+            dem.ravel(order="F"), inc, az, los, cols, rows
+        )
+    return los.astype(bool)
 
 
 def bin_slope_azim(az, slope, az_bins, slope_bins):
@@ -521,7 +450,7 @@ def get_slope_aspect(dem, get_aspect=True):
     if get_aspect:
         aspect = np.rad2deg(np.arctan2(-dz_dy, dz_dx))
         # Convert to clockwise about Y and restrict to (0, 360) from North
-        aspect = (270 + aspect) % 360
+        aspect = (90 + aspect) % 360
         return slope, aspect
     return slope
 

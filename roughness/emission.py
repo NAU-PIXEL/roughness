@@ -28,7 +28,7 @@ def rough_emission_lookup(
     # if date is not None:
     #     date = pd.to_datetime(date)
     sun_theta, sun_az, sc_theta, sc_az = geom
-    tloc = rh.inc_to_tloc(sun_theta, sun_az)
+    tloc = rh.inc_to_tloc(sun_theta, sun_az, lat)
     if isinstance(wls, np.ndarray):
         wls = rh.wl2xr(wls)
 
@@ -36,13 +36,11 @@ def rough_emission_lookup(
     shadow_table = rn.get_shadow_table(rms, sun_theta, sun_az, flookup)
 
     # Get illum and shadowed facet temperatures
-    temp_illum = get_temp_table(tloc, albedo, lat, tlookup).interp_like(
-        shadow_table
-    )
-    temp_shade = get_shadow_temp(sun_theta, sun_az, temp_illum)
-    # temp_shade = get_shadow_temp_table(tloc, albedo, lat, tlookup).interp_like(
-    #     shadow_table
-    # )
+    temp_illum = get_temp_table(tloc, albedo, lat, tlookup)
+    tflat = temp_illum.sel(theta=0, az=0)
+    temp_illum = temp_illum.interp_like(shadow_table)
+    temp_shade = get_shadow_temp(sun_theta, sun_az, tflat)
+    # temp_shade = get_shadow_temp_table(tloc, albedo, lat, tlookup).interp_like(shadow_table)
 
     # Compute 2 component emission of illuminated and shadowed facets
     emission_table = emission_2component(
@@ -51,10 +49,7 @@ def rough_emission_lookup(
 
     if rerad:
         # emission_table += get_reradiation_lookup(emission_table, albedo)
-        t_flat = get_temp_table(tloc, albedo, lat, tlookup).sel(theta=0, az=0)
-        emission_table += get_reradiation_jb(
-            emission_table, t_flat, 0.12, 0.95
-        )
+        emission_table += get_reradiation_jb(emission_table, tflat, 0.12, 0.95)
 
     # Weight each facet by its prob of occurring and being visible from sc
     weights = rn.get_weight_table(rms, sun_theta, sc_theta, sc_az, flookup)

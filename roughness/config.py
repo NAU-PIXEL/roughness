@@ -21,6 +21,8 @@ LUT_DIMS_LONGNAMES = (
     "Facet Azimuth Angle",
     "Facet Slope Angle",
 )
+RMSS = (0, 1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
+INCS = (0, 2, 5, 10, 20, 30, 45, 60, 70, 80, 85, 88, 90)
 NRMS = 10  # Number of RMS slopes in [0, 50) degrees.
 NINC = 10  # Number of incidence angles in [0, 90) degrees.
 NAZ = 36  # Number of facet azimuth bins in [0, 360) degrees.

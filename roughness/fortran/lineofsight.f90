@@ -36,9 +36,9 @@ SUBROUTINE lineofsight(dem, elev, azim, los, cols, rows)
   INTEGER, intent(in) :: cols, rows
   REAL(8), intent(inout) :: elev, azim
   REAL(8), intent(in), dimension(rows*cols) :: dem
-  REAL(8), intent(inout), dimension(0:rows-1, 0:cols-1) :: los
+  REAL(8), intent(inout), dimension(0:cols-1, 0:rows-1) :: los
 !f2py intent(in,out) :: los
-  REAL(8), dimension(0:rows-1, 0:cols-1) :: z
+  REAL(8), dimension(0:cols-1, 0:rows-1) :: z
   REAL(8), dimension(0:2) :: inputV,inv_inputV, norm_inputV, vec2origin
   REAL(8) :: dx, dy, zproj, zcomp
   INTEGER :: idx, jdy, n, i, j, f_i, f_j, casx, casy, newshape(2)
