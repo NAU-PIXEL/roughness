@@ -52,9 +52,9 @@ inc_slider = ipyw.IntSlider(
     continuous_update=False,
 )
 az_slider = ipyw.IntSlider(
-    260,
-    min=azs.min(),
-    max=azs.max(),
+    270,
+    min=0,
+    max=360,
     step=15,
     description="Solar az",
     continuous_update=False,
@@ -124,3 +124,7 @@ def plot(rms=rms_slider, inc=inc_slider, az=az_slider):
     ax3.set_ylabel("Shadow probability")
     ax3.set_title("Shadow probability vs. facet slope")
     ax3.legend()
+
+
+# %%
+rp.plot_slope_az_table(lookup.total.sel(inc=85).sel(rms=10), proj="polar")

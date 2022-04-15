@@ -46,7 +46,8 @@ def get_view_table(rms, sc_theta, sc_az, los_lookup=FLOOKUP):
     view_prob (2D array): View probability table (dims: az, theta)
     """
     view = get_los_table(rms, sc_theta, sc_az, los_lookup, "prob")
-    view *= get_view_cos_theta(view.theta, view.az, sc_theta, sc_az)
+    facet_theta, facet_az = rh.facet_grids(view)
+    view *= get_facet_cos_theta(facet_theta, facet_az, sc_theta, sc_az)
     return view.where(view > 0)  # drop negative (angled away from sc)
 
 
@@ -68,12 +69,7 @@ def get_facet_table(rms, inc, los_lookup=FLOOKUP):
     prob (2D array): Binned probability of facet occurring (dims: az, theta).
     """
     total = get_los_table(rms, inc, None, los_lookup, "total")
-    # If rms=0 (or < first theta), assume surface is flat
-    if rms < total.theta.values[1]:
-        prob = xr.zeros_like(total)
-        prob.loc[{"theta": 0}] = 1  # flat => prob=1 for all theta=0
-    else:
-        prob = total / total.sum()  # .sum skips NaN
+    prob = total / total.sum()  # .sum skips NaN
     return prob
 
 
@@ -97,24 +93,29 @@ def get_weight_table(rms, sun_theta, sc_theta, sc_az, flookup=None):
     return view_table * facet_weight
 
 
-def get_view_cos_theta(facet_theta, facet_az, sc_theta, sc_az):
+def get_facet_cos_theta(facet_theta, facet_az, theta, az):
     """
-    Return weighting factor for surface facets (facet_theta, facet_az) as
-    viewed from (sc_theta, sc_az) as cos(angle) between facet and view vectors.
+    Return cos(i) between facet_theta, facet_az and target (theta, az) vectors.
 
-    Computes cos(angle) between the vectors as cartesian dot product.
+    Computes cos(i) between as cartesian dot product.
 
     Parameters
     ----------
     facet_theta (2D array): Surface facet thetas [deg]
     facet_az (2D array): Surface facet azimuths [deg]
-    sc_theta (num or array): Spacecraft emission angle [deg]
-    sc_az (num or array): Spacecraft azimuth [deg]
+    theta (num or array): Target incidence angle [deg]
+    az (num or array): Target azimuth angle [deg]
     """
-    ft, fa, st, sa = map(np.deg2rad, [facet_theta, facet_az, sc_theta, sc_az])
-    facet_cart = rh.sph2cart(*np.meshgrid(ft, fa))
-    sc_cart = rh.sph2cart(st, sa)
-    return rh.element_dot(facet_cart, sc_cart)
+    facet_cart = rh.sph2cart(np.deg2rad(facet_theta), np.deg2rad(facet_az))
+    target_cart = rh.sph2cart(np.deg2rad(theta), np.deg2rad(az))
+    # ft, fa, st, sa = map(np.deg2rad, [facet_theta, facet_az, theta, az])
+    # facet_cart = rh.sph2cart(*np.meshgrid(ft, fa))
+    # sc_cart = rh.sph2cart(st, sa)
+    cinc = rh.element_dot(facet_cart, target_cart)
+    if isinstance(facet_theta, xr.DataArray):
+        cinc = xr.ones_like(facet_theta) * cinc
+        cinc.name = "cos(inc)"
+    return cinc
 
 
 def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):
@@ -256,7 +257,7 @@ def slope_dist(theta, theta0, dist="rms", units="rad"):
 
 
 # File I/O
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=2)
 def load_los_lookup(path=FLOOKUP):
     """
     Return line of sight lookup at path.

@@ -22,7 +22,8 @@ def make_default_los_table():
     """Return default los table."""
     # Load in the synthetic DEM and scale factors
     zsurf = make_zsurf(DEMSIZE, default=True)
-    return make_los_table(zsurf, RMSS, INCS, thresh=MIN_FACETS, fout=FLOOKUP)
+    rmss, incs = np.array(RMSS), np.array(INCS)
+    return make_los_table(zsurf, rmss, incs, thresh=MIN_FACETS, fout=FLOOKUP)
 
 
 def make_los_table(
@@ -142,8 +143,14 @@ def make_los_table(
     ds.attrs["demsize"] = zsurf.shape
     ds.attrs["threshold"] = thresh
     ds.attrs["az0"] = az0
+
     if fout is not None:
-        ds.to_netcdf(fout, mode="w")
+        try:
+            ds.to_netcdf(fout, mode="w")
+        except PermissionError as e:
+            print(e)
+            fout = fout + ".tmp"
+            ds.to_netcdf(fout, mode="w")
         print(f"Wrote {fout}")
     return ds
 

@@ -28,7 +28,7 @@ NINC = 10  # Number of incidence angles in [0, 90) degrees.
 NAZ = 36  # Number of facet azimuth bins in [0, 360) degrees.
 NTHETA = 45  # Number of facet slope bins in [0, 90) degrees.
 MIN_FACETS = 25  # Minimum number of valid facets to do binning, else nan
-DEMSIZE = 10000  # Size length of square dem in pixels.
+DEMSIZE = 12000  # Size length of square dem in pixels.
 AZ0 = 270  # Azimuth of LOS [degrees].
 
 # Paths (dirs)

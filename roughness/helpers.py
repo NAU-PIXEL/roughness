@@ -186,9 +186,17 @@ def facet_grids(los_table, units="degrees"):
     # Make coordinate grids
     theta_grid, az_grid = np.meshgrid(theta_arr, az_arr)
     if isinstance(los_table, xr.DataArray):
-        theta_grid = xr.ones_like(los_table) * theta_grid
+        theta_grid = xr.DataArray(
+            theta_grid,
+            dims=["az", "theta"],
+            coords={"az": az_arr, "theta": theta_arr},
+        )
         theta_grid.name = f"theta [{units}]"
-        az_grid = xr.ones_like(los_table) * az_grid
+        az_grid = xr.DataArray(
+            az_grid,
+            dims=["az", "theta"],
+            coords={"az": az_arr, "theta": theta_arr},
+        )
         az_grid.name = f"azimuth [{units}]"
     return theta_grid, az_grid
 
@@ -418,28 +426,6 @@ def get_local_az(ground, sun, sc):
     return az
 
 
-# def inc_to_tloc(inc, az):
-#     """
-#     Convert solar incidence and az to decimal local time (in 6-18h).
-#     # TODO: fix lat
-
-#     Parameters
-#     ----------
-#     inc: (float)
-#         Solar incidence in degrees (0, 90)
-#     az: (str)
-#         Solar azimuth in degrees (0, 360)
-#     """
-#     if isinstance(az, np.ndarray):
-#         inc = inc.copy()
-#         inc[az < 180] *= -1
-#     elif az < 180:
-#         inc *= -1
-#     coinc = 90 + inc  # (-90, 90) -> (0, 180)
-#     tloc = 6 * coinc / 90 + 6  # (0, 180) -> (6, 18)
-#     return tloc
-
-
 def inc_to_tloc(inc, az, lat):
     """
     Convert solar incidence and az to decimal local time (in 6-18h).
@@ -457,8 +443,6 @@ def inc_to_tloc(inc, az, lat):
     hr_angle = np.arccos(np.cos(inc) / np.cos(lat))
     if az % 360 < 180:
         hr_angle *= -1
-    # hr_angle = np.atleast_1d(hr_angle)
-    # hr_angle[az%360 < 180] *= -1 # (morning is -; afternoon is +)
     tloc = 12 + np.rad2deg(hr_angle) / 15
     return tloc
 
@@ -480,7 +464,7 @@ def tloc_to_inc(tloc, lat=0, az=False):
         Solar incidence (0, 90) [deg]
     """
     latr = np.deg2rad(lat)
-    hr_angle = np.deg2rad(15 * (tloc - 12))  # (morning is -; afternoon is +)
+    hr_angle = np.deg2rad(15 * (12 - tloc))  # (morning is +; afternoon is -)
     inc = np.rad2deg(np.arccos(np.cos(hr_angle) * np.cos(latr)))
     if az:
         az = np.arctan2(np.sin(hr_angle), -np.sin(latr) * np.cos(-hr_angle))

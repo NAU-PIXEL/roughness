@@ -9,7 +9,7 @@ import roughness.helpers as rh
 import roughness.config as cfg
 
 SIGMA = 5.667e-8
-DIV_C = ["c3", "c4", "c5", "c6", "c7", "c8", "c9"]
+DIV_C = ("c3", "c4", "c5", "c6", "c7", "c8", "c9")
 DIV_WL_MIN = np.array([7.55, 8.10, 8.38, 13, 25, 50, 100])  # [microns]
 DIV_WL_MAX = np.array([8.05, 8.40, 8.68, 23, 41, 99, 400])  # [microns]
 DIV_WL1 = np.array([0.0001, 8.075, 8.40, 13, 25, 50, 100])
@@ -253,6 +253,7 @@ def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
     return tbol
 
 
+@lru_cache(1)
 def load_div_filters(
     fdiv_filt=FDIV_FILT, scale=True, wlunits=True, bands=DIV_C
 ):
@@ -267,7 +268,7 @@ def load_div_filters(
         data,
         name="Normalized Response",
         dims=["wavenumber", "band"],
-        coords={"band": bands, "wavenumber": wn},
+        coords={"band": list(bands), "wavenumber": wn},
     )
     if scale:
         div_filt = div_filt * FILT_SCALE[np.newaxis, :]
@@ -287,10 +288,12 @@ def load_div_t2r(fdiv_t2r=FDIV_T2R, tmin=10, tmax=None):
     return t2r.sel(temperature=slice(tmin, tmax), drop=True)
 
 
-def divfilt_rad(wnrad, div_filt):
+def divfilt_rad(wnrad, div_filt=None):
     """
     Return radiance of Diviner bands (convolve rad with Diviner filter funcs).
     """
+    if div_filt is None:
+        div_filt = load_div_filters()
     filtered = div_filt * wnrad  # Must both have wavelength coord
     return filtered.sum(dim="wavelength") * 2
 
