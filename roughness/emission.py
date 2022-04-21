@@ -41,13 +41,25 @@ def rough_emission_lookup(
         wls = rh.wl2xr(wls)
 
     # Query los and temperature lookup tables
-    shadow_table = rn.get_shadow_table(rms, sun_theta, sun_az, flookup)
+    shadow_table = rn.get_shadow_table(rms, sun_theta, sun_az, flookup).dropna(
+        "theta"
+    )
 
     # Get illum and shadowed facet temperatures
     temp_table = get_temp_table(tloc, albedo, lat, tlookup)
     tflat = temp_table.sel(theta=0, az=0)
     temp_table = temp_table.interp_like(shadow_table)
+    if rerad:
+        rad_table = get_rad_sb(temp_table)
+        rerad = get_reradiation_jb(
+            sun_theta, rad_table.theta, tflat, albedo, emissivity
+        )
+        temp_table = get_temp_sb(rad_table + rerad)
+        # rerad = get_reradiation_jb(emission_table, tflat, emiss=emissivity)
+        # rad_shade += rad
+
     temp_shade = get_shadow_temp_table(temp_table, sun_theta, sun_az, tflat)
+    # temp_shade = 100
 
     # Directional emissivity table
     # facet_theta, facet_az = rh.facet_grids(temp_table)
@@ -55,7 +67,7 @@ def rough_emission_lookup(
 
     # Compute 2 component emission of illuminated and shadowed facets
     emission_table = emission_2component(
-        wls, temp_table, temp_shade, shadow_table, emissivity, rerad, tflat
+        wls, temp_table, temp_shade, shadow_table, emissivity
     )
 
     # Weight each facet by its prob of occurring and being visible from sc
@@ -95,12 +107,13 @@ def get_shadow_temp_table(
     facet_theta, facet_az = rh.facet_grids(temp_shadow)
     cinc = rn.get_facet_cos_theta(facet_theta, facet_az, sun_theta, sun_az)
 
-    # Only change temp of facets < 90 degrees to sun
+    # Only change temp of facets < 90 degrees to sun (cinc > 0)
     # Otherwise set to min of JB cooling curve or temp_table temp if colder
     tshadow = get_shadow_temp(sun_theta, sun_az, tflat)
     temp_shadow = xr.where(
         (cinc < 0) | (temp_shadow < tshadow), temp_shadow, tshadow
     )
+    # temp_shadow = get_shadow_temp(sun_theta, sun_az, temp_table)
 
     return temp_shadow
 
@@ -259,7 +272,7 @@ def cos_facet_sun_inc(surf_theta, surf_az, sun_theta, sun_az):
     """
     facet_vec = rh.sph2cart(np.deg2rad(surf_theta), np.deg2rad(surf_az))
     target_vec = rh.sph2cart(np.deg2rad(sun_theta), np.deg2rad(sun_az))
-    cinc = (sun_vec * surface_vec).sum(axis=2)
+    cinc = (facet_vec * target_vec).sum(axis=2)
     cinc[cinc < 0] = 0
     if isinstance(surf_theta, xr.DataArray):
         cinc = xr.ones_like(surf_theta) * cinc
@@ -351,7 +364,7 @@ def get_emission_eq(cinc, albedo, emissivity, solar_dist):
     return rad_eq
 
 
-def get_reradiation_lookup(rad_table, albedo=0.12):
+def get_reradiation_lookup(temp_table, albedo=0.12, emissivity=0.99):
     """
     Return emission incident on surf_theta from re-radiating adjacent level
     surfaces using lookup table. Modified from JB downwelling approximation.
@@ -359,18 +372,45 @@ def get_reradiation_lookup(rad_table, albedo=0.12):
     TODO: Add albedo scaling for rerad slopes
 
     """
-    rad_table = rn.rotate_az_lookup(rad_table, target_az=180, az0=0)
-    rad_table *= (rad_table.theta / 180) * albedo
-    return rad_table
+    # Reflected radiance from sun to facet to each other facet?
+    # (solar rad * facet albedo)/pi * cos(inc to each facet)
+
+    # Emission from each facet to each other facet assuming lambertian
+    # (sigT^4 * facet emissivity)/pi * cos(inc to each facet) * (1-albedo)
+    # should be weighted by P(facet) - what is it scaled to? if we weight,
+    #  we're presuming a total amount of rerad right?
+    rerad_table = get_rad_sb(temp_table) * emissivity / np.pi
+    rerad_table = rn.rotate_az_lookup(rerad_table, target_az=180, az0=0)
+
+    rerad_table *= (rerad_table.theta / 180) * albedo
+    return rerad_table
 
 
-def get_reradiation_jb(rad_table, t_flat, albedo=0.12, emiss=0.95):
+def get_reradiation_jb(
+    sun_theta,
+    facet_theta,
+    t_flat,
+    albedo=0.12,
+    emiss=0.95,
+    alb_scaling="keihm",
+):
     """
     Return emission incident on surf_theta from re-radiating adjacent level
     surfaces using JB downwelling approximation.
     """
-    rerad_emitted = temp2rad(rad_table.wavelength, t_flat, emiss)
-    rerad_absorbed = (rad_table.theta / 180) * albedo * rerad_emitted
+    facet_alb = get_albedo_scaling(
+        facet_theta, albedo=albedo, mode=alb_scaling
+    )
+    # rerad_emitted = temp2rad(rad_table.wavelength, t_flat, emiss)
+    rerad_emitted = get_rad_sb(t_flat) * emiss
+    rerad_reflected = (
+        SC
+        * np.cos(np.deg2rad(sun_theta))
+        * get_albedo_scaling(sun_theta, albedo, mode=alb_scaling)
+    )
+    rerad_absorbed = (facet_theta / 180) * (
+        rerad_emitted + (1 - facet_alb) * rerad_reflected
+    )
     return rerad_absorbed
 
 
@@ -422,6 +462,20 @@ def get_temp_sb(rad):
     return temp
 
 
+def get_rad_sb(temp):
+    """
+    Return radiance assuming the Stefan-Boltzmann Law given temperature.
+
+    Parameters
+    ----------
+    temp (num or arr): Temperature [K]
+    """
+    rad = SB * temp ** 4
+    if isinstance(temp, xr.DataArray):
+        rad.name = "Radiance [W m^-2]"
+    return rad
+
+
 def get_shadow_temp(sun_theta, sun_az, temp0):
     """
     Return temperature of shadows. Nominally 100 K less than the rad_eq
@@ -450,8 +504,6 @@ def emission_2component(
     temp_shadow,
     shadow_table,
     emissivity=1,
-    rerad=False,
-    tflat=300,
 ):
     """
     Return roughness emission spectrum at given wls given the temperature
@@ -466,11 +518,6 @@ def emission_2component(
     """
     rad_illum = temp2rad(wavelength, temp_illum, emissivity)
     rad_shade = temp2rad(wavelength, temp_shadow, emissivity)
-    if rerad:
-        # emission_table += get_reradiation_lookup(emission_table, albedo)
-        rad = get_reradiation_jb(rad_illum, tflat, emiss=emissivity)
-        rad_illum += rad
-        rad_shade += rad
     rad_total = rad_illum * (1 - shadow_table) + rad_shade * shadow_table
     return rad_total
 
