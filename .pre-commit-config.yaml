@@ -3,27 +3,27 @@
 default_stages: [commit]
 repos:
 -   repo: https://github.com/mwouts/jupytext
-    rev: v1.11.2
+    rev: v1.13.8
     hooks:
     - id: jupytext
       name: Sync notebooks with jupytext
       entry: jupytext
       files: ^examples/
-      args: [--sync, --pipe, black]
-      additional_dependencies:
-        - black==20.8b1 # Matches hook
+      args: [--sync]  #, --pipe, black]
+      # additional_dependencies:
+      #   - black==20.8b1 # Matches hook
 -   repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 22.3.0
     hooks:
     - id: black
       name: Format with black
       entry: black
       language_version: python3
-      exclude: ^examples/
+      extend-exclude: ^examples/
       types: [python]
-      always_run: true
+      always_run: false
 -   repo: https://github.com/PyCQA/pylint
-    rev: pylint-2.6.0
+    rev: v2.14.0
     hooks:
     - id: pylint
       name: Lint with pylint
@@ -42,12 +42,12 @@ repos:
         - -d W0511
       always_run: false  # suppress error if run on no files
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.2.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: mixed-line-ending
     -   id: no-commit-to-branch
-        args: [-b main, -b gh-pages]
+        args: [--branch, main, --branch, gh-pages]
     -   id: check-added-large-files
         args: [--maxkb=4000]

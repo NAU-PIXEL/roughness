@@ -40,7 +40,6 @@ pre-commit = "^2.13.0"
 
 [tool.black]
 line-length=79
-extend-exclude=["examples"]
 
 [tool.pylint.reports]
 output-format="colorized"
