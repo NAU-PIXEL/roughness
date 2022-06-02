@@ -4,14 +4,19 @@ import numpy as np
 from roughness import __author__, __email__
 import roughness.roughness as rn
 import roughness.helpers as rh
-from roughness.config import LUT_NAMES
+from roughness.config import LUT_NAMES, TEST_DIR
+
+# Test_lookup generated from default_lookup.nc with
+# ds.sel(rms=[0, 5, 10, 20, 40], inc=[0, 30, 60, 90],
+#        az=[5, 95, 185, 275], theta=[1, 21, 41, 61, 81])
+LOOKUP = TEST_DIR / "test_lookup.nc"
 
 
 def test_get_shadow_table_nadir():
     """Test get_shadow_table() with nadir sun vectorn."""
     rms = 20
     sun_theta, sun_az = (0, 270)  # solar inclination angle
-    actual = np.nansum(rn.get_shadow_table(rms, sun_theta, sun_az))
+    actual = np.nansum(rn.get_shadow_table(rms, sun_theta, sun_az, LOOKUP))
     expected = 0
     np.testing.assert_equal(actual, expected)
 
@@ -28,7 +33,7 @@ def test_get_view_table_nadir():
     """Test get_view_table() with nadir spacecraft vector."""
     rms = 20
     sc_theta, sc_az = (0, 270)  # spacecraft emisssion angle
-    view = rn.get_view_table(rms, sc_theta, sc_az)
+    view = rn.get_view_table(rms, sc_theta, sc_az, LOOKUP)
     actual = view.sel(theta=1).values
     expected = np.ones(actual.shape) * np.cos(np.deg2rad(1))
     np.testing.assert_equal(actual, expected)
@@ -44,7 +49,7 @@ def test_get_los_table():
 
 def test_open_los_lookup():
     """Test open_los_lookup from default"""
-    lookup = rn.open_los_lookup()
+    lookup = rn.open_los_lookup(LOOKUP)
     for name in LUT_NAMES:
         assert name in lookup
 

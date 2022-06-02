@@ -5,7 +5,7 @@ import site
 
 pdb = os.path.join(site.getsitepackages()[0], "pyproj/proj_dir/share/proj")
 pdb = os.path.abspath(pdb)
-if os.environ["PROJ_LIB"] != pdb:
+if os.environ.get("PROJ_LIB") != pdb:
     os.environ["PROJ_LIB"] = pdb
 
 # Automatically set version number with github actions, don't break local tests

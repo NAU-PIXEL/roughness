@@ -40,6 +40,7 @@ DATA_DIR_DIVINER = DATA_DIR / "Diviner" / "lev4"
 EXAMPLES_DIR = ROOT_DIR / "examples"
 FIGURES_DIR = ROOT_DIR / "figures"
 FORTRAN_DIR = ROUGHNESS_DIR / "fortran"
+TEST_DIR = ROOT_DIR / "tests"
 
 # Paths (setup_roughness.py)
 FDATA_VERSION = DATA_DIR / ".data_version.txt"
@@ -75,7 +76,7 @@ HDSIZE = "Side length of synthetic DEM in pixels (default: 10000)."
 HRAZ = "Raytracing line of sight azimuth in degrees (default: 270)"
 
 # JSON
-with open(DATA_DIR_M3 / "m3_wls.json") as f:
+with open(DATA_DIR_M3 / "m3_wls.json", "r", encoding="utf8") as f:
     M3_WLS = json.load(f)
     M3GWL = M3_WLS["GWL"]
     M3TWL = M3_WLS["TWL"]

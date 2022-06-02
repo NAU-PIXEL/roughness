@@ -142,4 +142,4 @@ scratch/
 # Data folder except !items
 /data/*
 !data/__init__.py
-!data/m3
+!data/m3/m3_wls.json
