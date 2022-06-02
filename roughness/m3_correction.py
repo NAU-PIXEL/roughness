@@ -1,6 +1,7 @@
 """M3-specific functions for testing"""
 import time
 import os.path as op
+import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -12,6 +13,7 @@ from roughness.config import M3TWL as TWL
 from roughness.config import FLOOKUP, FALBEDO, TLOOKUP
 
 # Constants
+NCPUS = max(mp.cpu_count() - 1, 1)  # Number of CPUs available (at least 1)
 PATH = "/work/ctaiudovicic/data/"
 M3PATH = f"{PATH}m3/"
 M3ANCPATH = f"{PATH}M3_ancillary_files/"
@@ -30,7 +32,8 @@ def m3_refl(
     rerad=False,
     flookup=FLOOKUP,
     tlookup=TLOOKUP,
-    toffset=0,
+    cst=0.05,
+    nprocs=NCPUS,
 ):
     """
     Return M3 reflectance using the roughness thermal correction (Bandfield et
@@ -41,15 +44,27 @@ def m3_refl(
     # Get wavelength, viewing geometry, photometry from M3 files
     if wl is None:
         wl = get_m3_wls(rad_L1)
-    solar_dist = get_solar_dist(m3_basename, obs)
-    sun_thetas, sun_azs, sc_thetas, sc_azs, phases, _ = get_m3_geom(obs, dem)
+    solar_dist = get_solar_dist(m3_basename, obs).values  # TODO: check
+    sun_thetas, sun_azs, sc_thetas, sc_azs, phases, _, tlocs = get_m3_geom(
+        obs, dem, obs.lat
+    )
+    # TODO: update to xarray
     photom = get_m3photom(
-        sun_thetas,
-        sc_thetas,
-        phases,
+        sun_thetas.values,
+        sc_thetas.values,
+        phases.values,
         polish=True,
         targeted=is_targeted(rad_L1),
     )
+    photom = xr.DataArray(
+        photom,
+        coords=[
+            ("lat", rad_L1.lat.values[::-1]),
+            ("lon", rad_L1.lon.values),
+            ("wavelength", rad_L1.wavelength.values),
+        ],
+    )
+    photom = photom.interp_like(rad_L1)
     # Get solar irradiance
     solar_spec = get_solar_spectrum(is_targeted(rad_L1))
     L_sun = re.get_solar_irradiance(solar_spec, solar_dist[:, :, np.newaxis])
@@ -60,62 +75,172 @@ def m3_refl(
         albedo = get_m3albedo(sun_thetas, refl_raw, solar_spec)
     if not isinstance(albedo, xr.DataArray):
         albedo = np.ones(rad_L1.shape[:2]) * albedo
-    # geom = (sun_thetas, sun_azs, sc_thetas, sc_azs)
-    # emission = re.rough_emission_lookup(
-    #     geom, wl, rms, albedo, rad_L1.lat, tloc, rerad, flookup, tlookup
-    # )
+
     # Get roughness emission for each pixel from rad eq on subpixel facets
-    emission = xr.zeros_like(rad_L1).reindex({"wavelength": wl}, method="pad")
-    for i, lon in enumerate(emission.lon):
-        print(f"{i}/{emission.lon.size}")
-        for j, lat in enumerate(emission.lat):
-            # TODO: split into function, parallelize
-            if isinstance(albedo, xr.DataArray):
-                alb = albedo.sel(lon=lon, lat=lat)
-            else:
-                alb = albedo[i, j]
-            geom = [c[i, j] for c in (sun_thetas, sun_azs, sc_thetas, sc_azs)]
-            emission[i, j] = re.rough_emission_lookup(
-                geom, wl, rms, alb, lat, rerad, flookup, tlookup
-            )
-            # emission[i, j] = re.rough_emission_eq(
-            #   geom, wl, rms, alb, emiss, solar_dist[i, j], rerad, flookup
-            # )
+    # Single process for loops
+    if nprocs == 1:
+        emission = xr.zeros_like(rad_L1).reindex(
+            {"wavelength": wl}, method="pad"
+        )
+        for i, lat in enumerate(emission.lat.values):
+            print(f"line {i}/{emission.lat.size}", end="\r", flush=True)
+            for j, lon in enumerate(emission.lon.values):
+                if isinstance(albedo, xr.DataArray):
+                    alb = float(albedo.sel(lon=lon, lat=lat))
+                else:
+                    alb = albedo[i, j]
+                geom = [
+                    c[i, j]
+                    for c in (
+                        sun_thetas.values,
+                        sun_azs.values,
+                        sc_thetas.values,
+                        sc_azs.values,
+                    )
+                ]
+                tloc = tlocs.values[i, j]
+                tparams = {"tloc": tloc, "albedo": alb, "lat": lat}
+                emission[i, j] = re.rough_emission_lookup(
+                    geom,
+                    wl,
+                    rms,
+                    tparams,
+                    rerad,
+                    alb,
+                    flookup,
+                    tlookup,
+                    emiss,
+                    cst,
+                )
+    else:
+        emission = get_emission_mp(
+            rad_L1.lat.values,
+            sun_thetas.values,
+            sun_azs.values,
+            sc_thetas.values,
+            sc_azs.values,
+            wl,
+            rms,
+            albedo.values,
+            tlocs.values,
+            rerad,
+            flookup,
+            tlookup,
+            emiss,
+            cst,
+            nprocs,
+        )
+        emission = xr.DataArray(
+            emission,
+            coords=[rad_L1.lat, rad_L1.lon, wl],
+            dims=["lat", "lon", "wavelength"],
+        )
 
     # Remove emission from Level 1 radiance and convert to I/F
     rad_emission = emission.interp(wavelength=rad_L1.wavelength)
-    i_f = re.get_rad_factor(rad_L1, rad_emission, L_sun, emiss)
-    refl = i_f * photom
-    return refl, emission
+    # Try passing in rough emission with emiss=1 or try converting to 3um BT
+    # rad_emission = re.bbr(3um_bt)
+    i_f = re.get_rad_factor(
+        rad_L1, rad_emission, L_sun
+    )  # emiss=None to get from data
+    # i_f = (rad - emission) / L_sun  # When emissivity is used in rough
+    refl = i_f * photom  # TODO:photom
+    return refl, emission, L_sun
 
 
-def get_m3_geom(obs, dem=None):
+def get_emission_mp(
+    lats,
+    sun_thetas,
+    sun_azs,
+    sc_thetas,
+    sc_azs,
+    wl,
+    rms,
+    albedo,
+    tlocs,
+    rerad,
+    flookup,
+    tlookup,
+    emiss,
+    cst,
+    procs=NCPUS,
+):
+    """Return emission parallelized across image"""
+    geom = zip(
+        sun_thetas.ravel(), sun_azs.ravel(), sc_thetas.ravel(), sc_azs.ravel()
+    )
+    geom = np.array(list(geom)).reshape(*sun_thetas.shape, 4)
+
+    xinds, yinds = np.nonzero(sun_thetas < 90)
+    args = (
+        (
+            geom[i, j],
+            wl,
+            rms,
+            {"albedo": albedo[i, j], "lat": lats[j], "tloc": tlocs[i, j]},
+            rerad,
+            albedo[i, j],
+            flookup,
+            tlookup,
+            emiss,
+            cst,
+        )
+        for i, j in zip(xinds, yinds)
+    )
+    with mp.Pool(processes=procs) as pool:
+        # Note: this parallel is inefficient, not much work for one pixel
+        emission_arr = np.array(pool.map(rough_emission_helper, args))
+    out_shape = (*sun_thetas.shape, len(wl))
+    emission = np.zeros(out_shape)
+    emission[xinds, yinds] = emission_arr
+    return emission
+
+
+def rough_emission_helper(args):
+    """Unpack args for rough emission lookup."""
+    return re.rough_emission_lookup(*args)
+
+
+def get_m3_geom(obs, dem=None, lat=0):
     """Return geometry array from M3 observation file and optional dem."""
     if dem is None:
         dem_theta = np.radians(obs[:, :, 7])
         dem_az = np.radians(obs[:, :, 8])
+    elif isinstance(dem, xr.Dataset):
+        dem_theta = np.arctan(dem.slope)
+        dem_az = dem.aspect
     else:
         dem_theta = np.arctan(dem[:, :, 0])
         dem_az = dem[:, :, 1]
-    sun_theta = np.radians(obs[:, :, 1])
-    sun_az = np.radians(obs[:, :, 0])
-    sc_theta = np.radians(obs[:, :, 3])
-    sc_az = np.radians(obs[:, :, 2])
+    if isinstance(obs, xr.DataArray):
+        sun_az = np.radians(obs.sel(band=1))
+        sun_theta = np.radians(obs.sel(band=2))
+        sc_az = np.radians(obs.sel(band=3))
+        sc_theta = np.radians(obs.sel(band=4))
+        i, e, g, sun_ground_az, sc_ground_az, sun_sc_az = rh.get_ieg_xr(
+            dem_theta, dem_az, sun_theta, sun_az, sc_theta, sc_az
+        )
+        tloc = rh.inc_to_tloc(np.rad2deg(sun_theta), np.rad2deg(sun_az), lat)
+    else:
+        sun_az = np.radians(obs[:, :, 0])
+        sun_theta = np.radians(obs[:, :, 1])
+        sc_az = np.radians(obs[:, :, 2])
+        sc_theta = np.radians(obs[:, :, 3])
 
-    # Compute angles in degrees
-    i, e, g, sun_sc_az = rh.get_ieg(
-        dem_theta, dem_az, sun_theta, sun_az, sc_theta, sc_az
-    )
-    sun_az = np.rad2deg(sun_az)
-    sc_az = np.rad2deg(sc_az)
-    return i, sun_az, e, sc_az, g, sun_sc_az
+        # Compute angles in degrees
+        i, e, g, sun_ground_az, sc_ground_az, sun_sc_az = rh.get_ieg(
+            dem_theta, dem_az, sun_theta, sun_az, sc_theta, sc_az
+        )
+    sun_az = np.rad2deg(sun_ground_az)
+    sc_az = np.rad2deg(sc_ground_az)
+    return i, sun_az, e, sc_az, g, sun_sc_az, tloc
 
 
-def get_m3_tloc(obs, dem=None):
+def get_m3_tloc(obs, dem=None, lat=0):
     """
     Return average local time of M3 observation.
     """
-    return rh.inc_to_tloc(*get_avg_sun_inc_az(obs, dem))
+    return rh.inc_to_tloc(*get_avg_sun_inc_az(obs, dem), lat)
 
 
 def get_avg_sun_inc_az(obs, dem=None):
@@ -493,6 +618,26 @@ def read_m3_image(hdr_path, ymin=0, ymax=None, xmin=0, xmax=None):
     return img
 
 
+def readm3geotif_xr(f, ext):
+    """
+    Read M3 geotiff and return xarray
+    """
+    da = xr.open_dataarray(f)
+    if "wavelength" in da.attrs:
+        wls = np.array(da.attrs["long_name"], dtype=float) / 1000
+        da = da.assign_coords(wavelength=("band", wls))
+        da = da.swap_dims({"band": "wavelength"}).drop("band")
+        del da.attrs["wavelength"]
+        del da.attrs["long_name"]
+    elif "long_name" in da.attrs:
+        da = da.assign_coords(labels=("band", np.array(da.attrs["long_name"])))
+        del da.attrs["long_name"]
+
+    da = da.rename({"x": "lon", "y": "lat"}).sortby("lat")
+    da = da.sel(lon=slice(ext[0], ext[1]), lat=slice(ext[2], ext[3]))
+    return da.transpose("lat", "lon", *set(da.dims).difference({"lat", "lon"}))
+
+
 def read_m3_geotiff(f, ext, pad=False):
     """
     Return M3 image from file f with extent ext using rasterio.
@@ -535,6 +680,44 @@ def read_m3_geotiff_ext(f, ext):
         if src.count == 1 and len(img.shape) > 2:
             img = img[:, :, 0]
     return img
+
+
+def m3_size_est(basename, ext):
+    """Return estimates number of pixels from M3img name and extent."""
+    mpp_res = get_m3_res(basename)
+    ppd_res = mpp2ppd(mpp_res, lat=np.mean(ext[2:]))
+    xsize = ppd_res * (ext[1] - ext[0])
+    ysize = ppd_res * (ext[3] - ext[2])
+    zsize = len(get_m3_wls(basename))
+    pixels = int(xsize * ysize)
+    data_size = pixels * zsize * 8 / 1e6  # MB assuming 8 bit float
+    return pixels, data_size
+
+
+def get_m3_res(basename):
+    """
+    Return the M3 spatial resolution in m/pixel which depends on the
+    operational mode (Global or Target) and the spacecraft altitude (doubled
+    in OP2C).
+    """
+    mode = basename[2]
+    if mode == "G":
+        res = 140  # m/pixel
+    elif mode == "T":
+        res = 70  # m/pixel
+    else:
+        raise ValueError("Basename must begin with M3G or M3T.")
+    if get_m3_op(basename) == "OP2C":
+        res *= 2
+    return res
+
+
+def mpp2ppd(mpp, lat=0, Rmoon=1737.4):
+    """Convert lunar meters / pixel to pixels / degree resolution at lat."""
+    circum_eq = 2 * np.pi * Rmoon * 1000  # m
+    circum_lat = circum_eq * np.cos(lat)
+    ppd = (circum_lat / mpp) / 360
+    return ppd
 
 
 def rio_pad(arr, ext, w, transform, fill_value=np.nan):
@@ -619,6 +802,19 @@ def m3_wl_to_ind(wl, img):
     Get index and nearest wavelength of img given wl in nanometers.
     """
     return wl_to_ind(wl, get_m3_wls(img))
+
+
+def get_dem_xr(fslope, fazimuth, felevation):
+    """Return DEM as xarray from fslope, fazimuth, felevation"""
+    s = xr.open_dataarray(fslope).sel(band=1).drop("band")
+    a = xr.open_dataarray(fazimuth).sel(band=1).drop("band")
+    e = xr.open_dataarray(felevation).sel(band=1).drop("band")
+    s.name = "Slope (rad)"
+    a.name = "Aspect (rad)"
+    e.name = "Elevation"
+    dem = xr.Dataset({"slope": s, "aspect": a, "elevation": e})
+    dem = dem.rename({"x": "lon", "y": "lat"})
+    return dem
 
 
 def get_dem_geotiff(

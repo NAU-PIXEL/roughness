@@ -13,25 +13,25 @@ def test_make_los_table_small():
     rmss = np.array([0, 45])
     incs = np.array([0, 90])
     naz, ntheta = (1, 2)
-    thresh = 0
+    thresh = 1
     size = 100
     # TODO: mock this to avoid randomness
     np.random.seed(0)
     zsurf = mlt.make_zsurf(size, write=False)
     actual = mlt.make_los_table(zsurf, rmss, incs, naz, ntheta, thresh)
-    expected = [
-        np.array([[[[0, 0]], [[0, 0]]], [[[5083, 4917]], [[0, 0]]]]),
-        np.array([[[[0, 0]], [[0, 0]]], [[[5083, 4917]], [[0, 0]]]]),
-        np.array(
-            [
-                [[[np.nan, np.nan]], [[np.nan, np.nan]]],
-                [[[1, 1]], [[np.nan, np.nan]]],
-            ]
-        ),
-    ]
-    np.testing.assert_array_equal(actual["total"].values, expected[0])
-    np.testing.assert_array_equal(actual["los"].values, expected[1])
-    np.testing.assert_array_almost_equal(actual["prob"].values, expected[2])
+    shape = actual.total.values.shape
+    expected_total = np.array(
+        [[1, 4917, 1, 4917], [np.nan, np.nan, np.nan, np.nan]]
+    ).reshape(shape)
+    expected_los = np.array(
+        [[1, 4917, 1, 0], [np.nan, np.nan, np.nan, np.nan]]
+    ).reshape(shape)
+    expected_prob = np.array(
+        [[1, 1, 1, 0], [np.nan, np.nan, np.nan, np.nan]]
+    ).reshape(shape)
+    np.testing.assert_array_equal(actual["total"].values, expected_total)
+    np.testing.assert_array_equal(actual["los"].values, expected_los)
+    np.testing.assert_array_almost_equal(actual["prob"].values, expected_prob)
 
 
 def test_make_zsurf():

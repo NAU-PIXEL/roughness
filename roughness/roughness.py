@@ -139,17 +139,18 @@ def get_los_table(rms, inc, az=None, los_lookup=FLOOKUP, da="prob"):
     los_table (2D array): Line of sight probability table (dims: az, theta)
     """
     # Format rms and inc to pass to get_table_xarr
-    los_table = get_table_xarr((rms, inc), ("rms", "inc"), az, da, los_lookup)
+    params = {"rms": rms, "inc": inc}
+    los_table = get_table_xarr(params, az, da, los_lookup)
     return los_table
 
 
-def get_table_xarr(params, dims=None, az=None, da=None, los_lookup=FLOOKUP):
+def get_table_xarr(params, az=None, da=None, los_lookup=None):
     """
     Return interpolated xarray.DataArray of los_lookup table at given params.
 
     Parameters
     ----------
-    params (list): List of values to query in los_lookup.
+    params (dict): Dictionary of values to query in los_lookup.
     dims (list of str): Dimensions name of each param (default: index order).
     az (num): Azimuth of observation to query (default: az0).
     da (str): DataArray in xarray.DataSet to query (default: prob)
@@ -161,28 +162,30 @@ def get_table_xarr(params, dims=None, az=None, da=None, los_lookup=FLOOKUP):
     """
     if los_lookup is None:
         los_lookup = FLOOKUP
-    if isinstance(los_lookup, np.ndarray):
-        los_lookup = rh.np2xr(los_lookup)
 
     # Load los_lookup if necessary and get desired DataArray
     if not isinstance(los_lookup, (xr.Dataset, xr.DataArray)):
-        los_lookup = load_los_lookup(los_lookup)
-    if da is not None and isinstance(los_lookup, xr.Dataset):
+        los_lookup = open_los_lookup(los_lookup)
+    if isinstance(los_lookup, xr.Dataset):
+        da = "prob" if da is None else da
         los_lookup = los_lookup[da]
 
-    # Get table dimensions if not named
-    if dims is None:
-        dims = list(los_lookup.dims)
-
-    # Get table coordinates
-    coords = {dims[i]: params[i] for i in range(len(params))}
+    # Verify correct params are supplied for los_lookup (all except theta, az)
+    k_req = los_lookup.coords.keys() - {"theta", "az"}
+    if params.keys() != k_req:
+        raise ValueError(
+            "Supplied parameters do not match lookup table. "
+            f"Expected: {k_req}. Got: {params.keys()}"
+        )
 
     # Rotate los_lookup to target azimuth (else leave in terms of az0)
     if az is not None:
         los_lookup = rotate_az_lookup(los_lookup, az)
 
-    # Get table values
-    table = los_lookup.interp(coords, method="linear")
+    # Get table values. Select if exact value in table, else interpolate.
+    selparams = {k: v for k, v in params.items() if v in los_lookup.coords[k]}
+    intparams = {k: v for k, v in params.items() if k not in selparams}
+    table = los_lookup.sel(selparams).interp(intparams, method="linear")
     return table
 
 
@@ -258,7 +261,7 @@ def slope_dist(theta, theta0, dist="rms", units="rad"):
 
 # File I/O
 @lru_cache(maxsize=2)
-def load_los_lookup(path=FLOOKUP):
+def open_los_lookup(path=FLOOKUP):
     """
     Return line of sight lookup at path.
 

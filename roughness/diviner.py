@@ -4,9 +4,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-import rasterio as rio
-import roughness.helpers as rh
 import roughness.config as cfg
+import roughness.helpers as rh
+import roughness.emission as re
+
 
 SIGMA = 5.667e-8
 DIV_C = ("c3", "c4", "c5", "c6", "c7", "c8", "c9")
@@ -102,33 +103,6 @@ def lev4hourly2xr(
     return out
 
 
-def xarr2geotiff(xarr, savefile, crs=cfg.MOON2000_ESRI):
-    """Write 3D xarray (bands, y, x) to geotiff with rasterio."""
-    count, height, width = xarr.shape
-    band_indices = np.arange(count) + 1
-    transform = None
-    if "transform" in xarr.attrs:
-        transform = tuple(xarr.attrs["transform"])
-    profile = {
-        "driver": "GTiff",
-        "height": height,
-        "width": width,
-        "count": count,
-        "dtype": str(xarr.dtype),
-        "transform": transform,
-        "crs": crs,
-    }
-    with rio.open(savefile, "w", **profile) as dst:
-        dst.write(xarr.values, band_indices)
-        for i in dst.indexes:
-            band_name = str(xarr.band[i - 1].values)
-            dst.update_tags(i, band_name)
-    if Path(savefile).exists():
-        print("Wrote to", savefile)
-    else:
-        print("Failed to write to", savefile)
-
-
 def fit_poly_daytime(Tday, deg=2):
     """
     Return polynomial fit of order deg to daytime temperature data.
@@ -159,7 +133,7 @@ def smooth_daytime(T_xarr, savefile=None):
     return Tsmooth
 
 
-def add_wls_diviner(xarr, bands=["t3", "t4", "t5", "t6", "t7", "t8", "t9"]):
+def add_wls_diviner(xarr, bands=("t3", "t4", "t5", "t6", "t7", "t8", "t9")):
     """
     Return xarr with wavelength coordinate.
     """
@@ -283,7 +257,7 @@ def load_div_t2r(fdiv_t2r=FDIV_T2R, tmin=10, tmax=None):
     """
     Return Diviner temperature to radiance lookup table.
     """
-    t2r = pd.read_csv(fdiv_t2r, sep="\s+", index_col=0, header=0)
+    t2r = pd.read_csv(fdiv_t2r, index_col=0, header=0, delim_whitespace=True)
     t2r = xr.DataArray(t2r, dims=["temperature", "band"], name="radiance")
     return t2r.sel(temperature=slice(tmin, tmax), drop=True)
 
@@ -314,6 +288,18 @@ def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
             right=np.nan,
         )
     return dbt
+
+
+def emission2tbol_xr(emission, wls, div_filt=None):
+    """Return tbol from input emission array at wls."""
+    wnrad = re.wlrad2wnrad(wls, emission)
+    divrad = divfilt_rad(wnrad, div_filt)
+    tbol = xr.zeros_like(emission.isel(wavelength=0).drop("wavelength"))
+    for i, lon in enumerate(divrad.lon.values):
+        for j, lat in enumerate(divrad.lat.values):
+            div_bts = divrad2bt(divrad.isel(lat=j, lon=i))
+            tbol.loc[{"lon": lon, "lat": lat}] = div_tbol(div_bts)
+    return tbol
 
 
 def cfst(bt, wl1, wl2, n_iter=100):

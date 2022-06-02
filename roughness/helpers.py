@@ -7,7 +7,6 @@ import numpy.f2py
 import xarray as xr
 import jupytext
 from . import config as cfg
-from . import __version__
 
 # Line of sight helpers
 def lookup2xarray(lookups, rms_coords=None, inc_coords=None, nodata=-999):
@@ -271,8 +270,8 @@ def versions_match(version_a, version_b, precision=2):
 
 def check_data_updated():
     """Check if data version is up to date."""
-    data_version = get_data_version()
-    if data_version is None or not versions_match(data_version, __version__):
+    version = get_data_version()
+    if version is None or not versions_match(version, cfg.__version__):
         print("WARNING: The roughness/data folder is not up to date!")
         print("Update to the newest lookup tables with -d flag.")
         return False
@@ -293,7 +292,7 @@ def get_data_version(data_version_file=cfg.FDATA_VERSION):
 def set_data_version(data_version_file=cfg.FDATA_VERSION):
     """Set data version in data/data_version.txt."""
     with open(data_version_file, "w") as f:
-        f.write(__version__)
+        f.write(cfg.__version__)
 
 
 @contextlib.contextmanager
@@ -381,8 +380,25 @@ def get_ieg(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     inc = get_angle_between(ground, sun, True)
     em = get_angle_between(ground, sc, True)
     phase = get_angle_between(sun, sc, True)
-    az = get_local_az(ground, sun, sc)
-    return (inc, em, phase, az)
+    sun_ground_az, sc_ground_az, sun_sc_az = get_local_az(ground, sun, sc)
+    return (inc, em, phase, sun_ground_az, sc_ground_az, sun_sc_az)
+
+
+def get_ieg_xr(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
+    """
+    Return local solar incidence, spacecraft emission and phase angle (i, e, g)
+    and azimuth given input viewing geometry.
+
+    Input zeniths and azimuths in radians.
+    """
+    ground = sph2cart_xr(ground_zen, ground_az)
+    sun = sph2cart_xr(sun_zen, sun_az)
+    sc = sph2cart_xr(sc_zen, sc_az)
+    inc = get_angle_between_xr(ground, sun, True)
+    em = get_angle_between_xr(ground, sc, True)
+    phase = get_angle_between_xr(sun, sc, True)
+    sun_ground_az, sc_ground_az, sun_sc_az = get_local_az_xr(ground, sun, sc)
+    return (inc, em, phase, sun_ground_az, sc_ground_az, sun_sc_az)
 
 
 def get_angle_between(vec1, vec2, safe_arccos=False):
@@ -395,6 +411,15 @@ def get_angle_between(vec1, vec2, safe_arccos=False):
     if safe_arccos:
         # Restrict dot product to [-1, 1] to safely pass to arccos
         dot = np.clip(dot, -1, 1)
+    return np.rad2deg(np.arccos(dot))
+
+
+def get_angle_between_xr(vec1, vec2, safe_arccos=False):
+    """Return angle between cartesian vec1 and vec2 using dot product."""
+    dot = vec1.dot(vec2, dims="xyz")
+    if safe_arccos:
+        # Restrict dot product to [-1, 1] to safely pass to arccos
+        dot = dot.clip(-1, 1)
     return np.rad2deg(np.arccos(dot))
 
 
@@ -423,7 +448,31 @@ def get_local_az(ground, sun, sc):
     sun_rel_ground = element_norm(element_triple_cross(ground, sun, ground))
     az = get_angle_between(sc_rel_ground, sun_rel_ground, True)
     az[((az < 0) & (az > 180)) | np.isnan(az)] = 0
-    return az
+    return sun_rel_ground, sc_rel_ground, az
+
+
+def get_local_az_xr(ground, sun, sc):
+    """Return azimuth angle of the spacecraft with respect to the sun and local
+    slope. Assumes inputs are same size and shape and are in 3D
+    Cartesian coords (ixjxk)."""
+    sc_rel_ground = inc_rel_ground_xr(sc, ground)
+    sun_rel_ground = inc_rel_ground_xr(sun, ground)
+    az = get_angle_between_xr(sc_rel_ground, sun_rel_ground, True)
+    az = az.where(((az >= 0) & (az <= 180)))
+    return sun_rel_ground, sc_rel_ground, az
+
+
+def inc_rel_ground_xr(vec, ground):
+    """Return vec relative to ground vector."""
+    cross = triple_cross_xr(ground, vec, ground)
+    # Normalize vector by magnitude
+    mag = np.sqrt((cross ** 2).sum(dim="xyz"))
+    return cross / mag
+
+
+def triple_cross_xr(a, b, c):
+    """Return cross product of a, b, c in 3D Cartesian coordinates."""
+    return b * a.dot(c, dims="xyz") - c * a.dot(b, dims="xyz")
 
 
 def inc_to_tloc(inc, az, lat):
@@ -441,7 +490,11 @@ def inc_to_tloc(inc, az, lat):
     """
     inc, lat = np.deg2rad(inc), np.deg2rad(lat)
     hr_angle = np.arccos(np.cos(inc) / np.cos(lat))
-    if az % 360 < 180:
+    if isinstance(az, xr.DataArray):
+        hr_angle = hr_angle.where(az % 360 > 180, hr_angle * -1)
+    elif isinstance(az, np.ndarray):
+        hr_angle[az % 360 < 180] *= -1
+    elif az % 360 < 180:
         hr_angle *= -1
     tloc = 12 + np.rad2deg(hr_angle) / 15
     return tloc
@@ -620,8 +673,58 @@ def sph2cart(theta, phi, radius=1):
     ).squeeze()
 
 
+def sph2cart_xr(theta, phi, radius=1):
+    """Convert spherical to cartesian coordinates using xarray."""
+    return xr.concat(
+        [
+            radius * np.sin(theta) * np.cos(phi),
+            radius * np.sin(theta) * np.sin(phi),
+            radius * np.cos(theta),
+        ],
+        dim="xyz",
+    )
+
+
+def cart2sph(x, y, z):
+    """
+    Convert from cartesian (x, y, z) to spherical (theta, phi, r).
+
+    Parameters
+    ----------
+    x: X component of ordered Cartesian coordinate pair.
+    y: Y component of ordered Cartesian coordinate pair.
+    z: Z component of ordered Cartesian coordinate pair.
+
+    Returns
+    -------
+    theta: Polar angle [rad].
+    phi: Azimuthal angle [rad].
+    radius: Radius.
+    """
+    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    theta = np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
+    phi = np.arctan2(y, x)
+    return (theta, phi, r)
+
+
 def xy2lonlat_coords(x, y, extent):
     """Convert x,y coordinates to lat,lon coordinates."""
     lon = np.linspace(extent[0], extent[1], len(x))
     lat = np.linspace(extent[3], extent[2], len(y))
     return lon, lat
+
+
+# Image I/O
+def xarr2geotiff(xarr, savefile, crs=cfg.MOON2000_ESRI):
+    """Write 3D xarray (bands, y, x) to geotiff with rasterio."""
+    xarr = xarr.rio.write_crs(crs)
+    if "wavelength" in xarr.dims:
+        xarr = xarr.transpose("wavelength", "lat", "lon")
+    else:
+        xarr = xarr.transpose("lat", "lon")
+    xarr = xarr.rio.set_spatial_dims("lon", "lat")
+    xarr.rio.to_raster(savefile)
+    if Path(savefile).exists():
+        print("Wrote to", savefile)
+    else:
+        print("Failed to write to", savefile)

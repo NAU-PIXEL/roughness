@@ -18,7 +18,7 @@ def test_get_shadow_table_nadir():
 
 def test_get_shadow_table_custom_sl():
     """Test get_shadow_table() with supplied shadow_lookup array."""
-    sl = np.ones((3, 6, 5, 4))  # in line of sight everywhere
+    sl = rh.np2xr(np.ones((3, 6, 5, 4)))  # in line of sight everywhere
     actual = rn.get_shadow_table(0, 0, 0, sl).values
     expected = np.zeros(sl.shape[-2:])
     np.testing.assert_equal(actual, expected)
@@ -28,22 +28,23 @@ def test_get_view_table_nadir():
     """Test get_view_table() with nadir spacecraft vector."""
     rms = 20
     sc_theta, sc_az = (0, 270)  # spacecraft emisssion angle
-    actual = np.nansum(rn.get_view_table(rms, sc_theta, sc_az, False))
-    expected = 792
+    view = rn.get_view_table(rms, sc_theta, sc_az)
+    actual = view.sel(theta=1).values
+    expected = np.ones(actual.shape) * np.cos(np.deg2rad(1))
     np.testing.assert_equal(actual, expected)
 
 
 def test_get_los_table():
     """Test get_los_table"""
-    mock_lookup = np.arange(10 * 10 * 36 * 45).reshape(10, 10, 36, 45)
-    actual = rn.get_los_table(0, 0, 270, los_lookup=mock_lookup)
+    lookup = rh.np2xr(np.arange(10 * 10 * 36 * 45).reshape(10, 10, 36, 45))
+    actual = rn.get_los_table(0, 0, 270, los_lookup=lookup)
     expected = np.arange(36 * 45).reshape(36, 45)
     np.testing.assert_array_equal(actual, expected)
 
 
-def test_load_los_lookup():
-    """Test load_los_lookup from default"""
-    lookup = rn.load_los_lookup()
+def test_open_los_lookup():
+    """Test open_los_lookup from default"""
+    lookup = rn.open_los_lookup()
     for name in LUT_NAMES:
         assert name in lookup
 

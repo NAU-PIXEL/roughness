@@ -1,5 +1,4 @@
 """Compute rough emission curves."""
-from functools import lru_cache
 import warnings
 import numpy as np
 import xarray as xr
@@ -12,13 +11,13 @@ def rough_emission_lookup(
     geom,
     wls,
     rms,
-    albedo,
-    lat,
+    tparams,
     rerad=True,
+    rerad_albedo=0.12,
     flookup=None,
     tlookup=None,
     emissivity=1,
-    cast_shadow_time=0.5,
+    cast_shadow_time=0.05,
 ):
     """
     Return rough emission spectrum given geom and params to tlookup.
@@ -28,17 +27,15 @@ def rough_emission_lookup(
     geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
     wls (arr): Wavelengths [microns]
     rms (arr): RMS roughness [degrees]
-    albedo (num): Hemispherical broadband albedo
-    lat (num): Latitude [degrees]
-    tloc (num): Local time past midnight [hours]
     rerad (bool): If True, include re-radiation from adjacent facets
+    rerad_albedo (num): Albedo of re-radiation
+    tparams (dict): Dictionary of temperature lookup parameters
     flookup (path or xarray): Facet lookup xarray or path to file.
     tlookup (path or xarray): Temperature lookup xarray or path to file.
     """
     # if date is not None:
     #     date = pd.to_datetime(date)
     sun_theta, sun_az, sc_theta, sc_az = geom
-    tloc = rh.inc_to_tloc(sun_theta, sun_az, lat)
     if isinstance(wls, np.ndarray):
         wls = rh.wl2xr(wls)
 
@@ -48,16 +45,19 @@ def rough_emission_lookup(
         shadow_table = shadow_table.dropna("theta")
 
     # Get illum and shadowed facet temperatures
-    temp_table = get_temp_table(tloc, albedo, lat, tlookup)
+    temp_table = get_temp_table(tparams, tlookup)
     tflat = temp_table.sel(theta=0, az=0)
     temp_table = temp_table.interp_like(shadow_table)
     temp_shade = get_shadow_temp_table(
-        temp_table, sun_theta, sun_az, albedo, lat, tloc, cast_shadow_time
+        temp_table, sun_theta, sun_az, tparams, cast_shadow_time
     )
     if rerad:
         rad_table = get_rad_sb(temp_table)
         rerad = get_reradiation_jb(
-            sun_theta, rad_table.theta, tflat, albedo, emissivity
+            sun_theta,
+            rad_table.theta,
+            tflat,
+            rerad_albedo,  # rerad_emissivity
         )
         # rerad = get_reradiation_alt(rad_table.theta, tflat, emissivity)
         temp_table = get_temp_sb(rad_table + rerad)
@@ -80,19 +80,33 @@ def rough_emission_lookup(
     return rough_emission
 
 
-def get_shadow_temp_new(temp_table, albedo, lat, tloc, cast_shadow_time=0.5):
+def get_shadow_temp_new(temp_table, tparams, cst=0.5, tlookup=TLOOKUP):
     """
     Return shadow temp scaled between current and dawn (coldest) temp.
     """
-    if tloc < 12:
-        tcold = get_temp_table(6, albedo, lat).interp_like(temp_table)
-    else:
-        tcold = get_temp_table(18, albedo, lat).interp_like(temp_table)
-    return cast_shadow_time * tcold + (1 - cast_shadow_time) * temp_table
+    # Shadow age is cst fraction * time since dawn
+    shadow_age = (tparams["tloc"] - 6) * cst
+
+    # Tloc of last illumination is tloc - shadow_age
+    last_illum = tparams["tloc"] - shadow_age
+
+    # Twarm is when surfaces were last illuminated
+    twparams = tparams.copy()
+    twparams["tloc"] = last_illum
+    twarm = get_temp_table(twparams, tlookup)
+
+    # Tcold is dawn temp
+    tcparams = tparams.copy()
+    tcparams["tloc"] = 6
+    tcold = get_temp_table(tcparams, tlookup)
+
+    # Linearly scale shadow temp between last illuminated temp and dawn temp
+    tshadow = cst * tcold + (1 - cst) * twarm
+    return tshadow.interp_like(temp_table)
 
 
 def get_shadow_temp_table(
-    temp_table, sun_theta, sun_az, albedo, lat, tloc, cast_shadow_time
+    temp_table, sun_theta, sun_az, tparams, cst, tlookup=TLOOKUP
 ):
     """
     Return shadow temperature for each facet in temp_illum.
@@ -105,37 +119,35 @@ def get_shadow_temp_table(
 
     Parameters
     ----------
-    tloc (num): Local time past midnight [hours].
-    albedo (num): Local albedo.
-    lat (num): Latitude [degrees].
-    tlookup (path or xarray): Temperature lookup xarray or path to file.
+    temp_table (xr.DataArray): Table of facet temperatures
+    sun_theta (num): Solar incidence angle
+    sun_az (num): Solar azimuth
+    tparams (dict): Dictionary of temperature lookup parameters
+    cst (num): Cast shadow time
     """
-    tshadow = get_shadow_temp_new(
-        temp_table, albedo, lat, tloc, cast_shadow_time
-    )
-    # Only change temp of facets < 90 degrees to sun (cinc > 0)
-    # Otherwise set to min of JB cooling curve or temp_table temp if colder
+    tshadow = get_shadow_temp_new(temp_table, tparams, cst, tlookup)
     # tshadow = get_shadow_temp(sun_theta, sun_az, tflat)
+
+    # Determine where facets are past local sunset (cinc > 0)
     facet_theta, facet_az = rh.facet_grids(temp_table)
     cinc = rn.get_facet_cos_theta(facet_theta, facet_az, sun_theta, sun_az)
     temp_shadow = temp_table.copy()
+
+    # Take normal nighttime temp for facets past sunset
+    # Take tshadow for facets in cast shadow unless normal temp is colder
     temp_shadow = xr.where(
         (cinc < 0) | (temp_shadow < tshadow), temp_shadow, tshadow
     )
     return temp_shadow
 
 
-@lru_cache(maxsize=3)
-def get_temp_table(tloc, albedo, lat, tlookup=None):
+def get_temp_table(params, tlookup=None):
     """
     Return 2D temperature table of surface facets (inc, az).
 
     Parameters
     ----------
-    date (str): Observation date (parsable with pandas.to_datetime).
-    tloc (num): Local time past midnight [hours].
-    albedo (num): Local albedo.
-    lat (num): Latitude [degrees].
+    params (dict): Dictionary of temperature lookup parameters.
     los_lookup (path or xarray): Los lookup xarray or path to file.
 
     Returns
@@ -144,21 +156,7 @@ def get_temp_table(tloc, albedo, lat, tlookup=None):
     """
     if tlookup is None:
         tlookup = TLOOKUP
-    params = [lat, albedo, tloc]  # lat symmetric about equator
-    coords = ["lat", "albedo", "tloc"]
-    # if date is not None:
-    #     params.append(pd.to_datetime(date))
-    #     # TODO : remove next 3 lines when xarray gdate is fixed
-    #     tlookup = xr.open_dataarray(tlookup)
-    #     tlookup["gdate"] = pd.DatetimeIndex(
-    #         tlookup["gdate"].values
-    #     ).sort_values()
-    #     tlookup = tlookup.sortby("gdate")
-    #     coords.append("gdate")
-
-    temp_table = rn.get_table_xarr(
-        params, coords, da="tsurf", los_lookup=tlookup
-    )
+    temp_table = rn.get_table_xarr(params, da="tsurf", los_lookup=tlookup)
     return temp_table
 
 
