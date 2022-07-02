@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
 #     name: python3
@@ -28,7 +28,7 @@ from roughness import plotting as rp
 from roughness.config import FLOOKUP
 
 # Load lookups (losfrac, Num los facets, Num facets total)
-lookup = rn.load_los_lookup(FLOOKUP)
+lookup = rn.open_los_lookup(FLOOKUP)
 
 # Get coord arrays and interactive plot sliders for rms, inc, az
 rmss = lookup.rms.values

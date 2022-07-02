@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.12.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: 'Python 3.7.7 64-bit (''.venv'': poetry)'
 #     name: python3
@@ -50,7 +50,7 @@ from roughness import roughness as rn
 from roughness import helpers as rh
 from roughness import plotting as rp
 
-lookup = rn.load_los_lookup()
+lookup = rn.open_los_lookup()
 
 # %%
 rmss = lookup.rms.values

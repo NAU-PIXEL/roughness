@@ -363,7 +363,7 @@ def get_emission_eq(cinc, albedo, emissivity, solar_dist):
     emissivity (num): Hemispherical broadband emissivity
     solar_dist (num): Solar distance (au)
     """
-    f_sun = SC / solar_dist ** 2
+    f_sun = SC / solar_dist**2
     rad_eq = f_sun * cinc * (1 - albedo) / emissivity
     if isinstance(cinc, xr.DataArray):
         rad_eq.name = "Radiance [W m^-2]"
@@ -400,7 +400,7 @@ def directional_emiss(theta):
     Return directional emissivity at angle theta.
     """
     trad = np.deg2rad(theta)
-    return 0.993 - 0.0302 * trad - 0.0897 * trad ** 2
+    return 0.993 - 0.0302 * trad - 0.0897 * trad**2
 
 
 def get_reradiation_jb(
@@ -487,7 +487,7 @@ def get_rad_sb(temp):
     ----------
     temp (num or arr): Temperature [K]
     """
-    rad = SB * temp ** 4
+    rad = SB * temp**4
     if isinstance(temp, xr.DataArray):
         rad.name = "Radiance [W m^-2]"
     return rad
@@ -546,7 +546,7 @@ def get_emissivity_table(facet_theta, facet_az, sc_theta, sc_az):
     """
     cinc = rn.get_facet_cos_theta(facet_theta, facet_az, sc_theta, sc_az)
     # Bandfield et al. (2015) nighttime fit
-    emissivity = 0.99 * cinc ** 0.14
+    emissivity = 0.99 * cinc**0.14
     return emissivity
 
 
@@ -568,7 +568,7 @@ def get_solar_irradiance(solar_spec, solar_dist):
     solar_spec (arr): Solar spectrum [W m^-2 um^-1] at 1 au
     solar_dist (num): Solar distance (au)
     """
-    return solar_spec / (solar_dist ** 2 * np.pi)
+    return solar_spec / (solar_dist**2 * np.pi)
 
 
 def get_rad_factor(rad, emission, solar_irr, emissivity=None):
@@ -606,10 +606,10 @@ def bbr(wavenumber, temp, radunits="wn"):
     radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
     """
     # Derive Planck radiation constants a and b from h, c, Kb
-    a = 2 * HC * CCM ** 2  # [J cm^2 / s] = [W cm^2]
+    a = 2 * HC * CCM**2  # [J cm^2 / s] = [W cm^2]
     b = HC * CCM / KB  # [cm K]
 
-    if isinstance(temp, (float, int)):
+    if np.isscalar(temp):
         if temp <= 0:
             temp = 1
     elif isinstance(temp, xr.DataArray):
@@ -618,7 +618,7 @@ def bbr(wavenumber, temp, radunits="wn"):
         temp[temp < 0] = 1
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        rad = (a * wavenumber ** 3) / (np.exp(b * wavenumber / temp) - 1.0)
+        rad = (a * wavenumber**3) / (np.exp(b * wavenumber / temp) - 1.0)
     if radunits == "wl":
         rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr um)]
     return rad
@@ -643,12 +643,12 @@ def btemp(wavenumber, radiance, radunits="wn"):
     Translated from ff_bbr.c in davinci_2.22.
     """
     # Derive Planck radiation constants a and b from h, c, Kb
-    a = 2 * HC * CCM ** 2  # [J cm^2 / s] = [W cm^2]
+    a = 2 * HC * CCM**2  # [J cm^2 / s] = [W cm^2]
     b = HC * CCM / KB  # [cm K]
     if radunits == "wl":
         # [W/(cm^2 sr um)] -> [W/(cm^2 sr cm^-1)]
         radiance = wlrad2wnrad(wn2wl(wavenumber), radiance)
-    T = (b * wavenumber) / np.log(1.0 + (a * wavenumber ** 3 / radiance))
+    T = (b * wavenumber) / np.log(1.0 + (a * wavenumber**3 / radiance))
     return T
 
 
@@ -671,7 +671,7 @@ def wnrad2wlrad(wavenumber, rad):
     """
     wavenumber_microns = wavenumber * 1e-4  # [cm-1] -> [um-1]
     rad_microns = rad * 1e4  # [1/cm-1] -> [1/um-1]
-    return rad_microns * wavenumber_microns ** 2  # [1/um-1] -> [1/um]
+    return rad_microns * wavenumber_microns**2  # [1/um-1] -> [1/um]
 
 
 def wlrad2wnrad(wl, wlrad):
@@ -679,7 +679,7 @@ def wlrad2wnrad(wl, wlrad):
     Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr um).
     """
     wn = 1 / wl  # [um] -> [um-1]
-    wnrad = wlrad / wn ** 2  # [1/um] -> [1/um-1]
+    wnrad = wlrad / wn**2  # [1/um] -> [1/um-1]
     return wnrad * 1e-4  # [1/um-1] -> [1/cm-1]
 
 
