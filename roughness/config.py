@@ -1,5 +1,4 @@
 """Roughness configuration."""
-import json
 from pathlib import Path
 from . import __version__
 
@@ -75,11 +74,6 @@ HTHRESH = "Threshold number of facets to compute los fraction (default: 25)."
 HDSIZE = "Side length of synthetic DEM in pixels (default: 10000)."
 HRAZ = "Raytracing line of sight azimuth in degrees (default: 270)"
 
-# JSON
-with open(DATA_DIR_M3 / "m3_wls.json", "r", encoding="utf8") as f:
-    M3_WLS = json.load(f)
-    M3GWL = M3_WLS["GWL"]
-    M3TWL = M3_WLS["TWL"]
 
 # Georeferencing
 MOON2000_ESRI = "ESRI:104903"

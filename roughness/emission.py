@@ -10,8 +10,8 @@ from roughness.config import SB, SC, CCM, KB, HC, TLOOKUP
 def rough_emission_lookup(
     geom,
     wls,
-    rms,
-    tparams,
+    rms=15,
+    tparams=None,
     rerad=True,
     rerad_albedo=0.12,
     flookup=None,
@@ -33,8 +33,8 @@ def rough_emission_lookup(
     flookup (path or xarray): Facet lookup xarray or path to file.
     tlookup (path or xarray): Temperature lookup xarray or path to file.
     """
-    # if date is not None:
-    #     date = pd.to_datetime(date)
+    if tparams is None:
+        tparams = {}  # TODO: raise more useful error here
     sun_theta, sun_az, sc_theta, sc_az = geom
     if isinstance(wls, np.ndarray):
         wls = rh.wl2xr(wls)
@@ -571,7 +571,7 @@ def get_solar_irradiance(solar_spec, solar_dist):
     return solar_spec / (solar_dist**2 * np.pi)
 
 
-def get_rad_factor(rad, emission, solar_irr, emissivity=None):
+def get_rad_factor(rad, solar_irr, emission=None, emissivity=None):
     """
     Return radiance factor (I/F) given observed radiance, modeled emission,
     solar irradiance and emissivity. If no emissivity is supplied,
@@ -584,7 +584,8 @@ def get_rad_factor(rad, emission, solar_irr, emissivity=None):
     solar_irr (num or arr): Solar irradiance [W m^-2 um^-1]
     emissivity (num or arr): Emissivity (if None, assume Kirchoff)
     """
-    if emissivity is None:
+    emissivity = 1 if emissivity is None else emissivity
+    if emission is not None and emissivity is None:
         # Assume Kirchoff's Law to compute emissivity
         emissivity = (rad - solar_irr) / (emission - solar_irr)
     return (rad - emissivity * emission) / solar_irr

@@ -56,12 +56,12 @@ def lev4hourly2xr(
         tres = 24 / (len(fgrds) / 8)  # [hr]
     grids = []
     bands = []
-    for i, fgrd in enumerate(fgrds):
+    for fgrd in fgrds:
         _, band, ind = Path(fgrd).stem.split("-")
         tloc = (int(ind) - 1) * tres  # tloc in [0, 24) h
 
         # Read in .grd and set its local time to tloc
-        grid = xr.open_rasterio(fgrds[i]).sel(band=1)
+        grid = xr.open_rasterio(fgrd).sel(band=1)
         grid["tloc"] = tloc
         grids.append(grid)
 
@@ -292,13 +292,16 @@ def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
 
 def emission2tbol_xr(emission, wls, div_filt=None):
     """Return tbol from input emission array at wls."""
+    if not isinstance(wls, xr.DataArray):
+        wls = rh.wl2xr(wls)
     wnrad = re.wlrad2wnrad(wls, emission)
     divrad = divfilt_rad(wnrad, div_filt)
     tbol = xr.zeros_like(emission.isel(wavelength=0).drop("wavelength"))
-    for i, lon in enumerate(divrad.lon.values):
-        for j, lat in enumerate(divrad.lat.values):
-            div_bts = divrad2bt(divrad.isel(lat=j, lon=i))
-            tbol.loc[{"lon": lon, "lat": lat}] = div_tbol(div_bts)
+    dim0, dim1 = tbol.dims  # Generic so that x,y or lat,lon work in any order
+    for i in range(len(tbol[dim0])):
+        for j in range(len(tbol[dim1])):
+            div_bts = divrad2bt(divrad.isel({dim0: i, dim1: j}))
+            tbol[i, j] = div_tbol(div_bts)
     return tbol
 
 
@@ -315,7 +318,7 @@ def cfst(bt, wl1, wl2, n_iter=100):
         tot = 0
         for w in range(1, n_iter + 1):
             wv = w * v
-            ff = (w ** -4) * (np.e ** -wv) * (((wv + 3) * wv + 6) * wv + 6)
+            ff = (w**-4) * (np.e**-wv) * (((wv + 3) * wv + 6) * wv + 6)
             tot += ff
         return tot
 

@@ -19,7 +19,7 @@ repos:
       name: Format with black
       entry: black
       language_version: python3
-      extend-exclude: ^examples/
+      exclude: ^examples/
       types: [python]
       always_run: false
 -   repo: https://github.com/PyCQA/pylint

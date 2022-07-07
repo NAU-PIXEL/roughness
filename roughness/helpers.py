@@ -282,7 +282,7 @@ def get_data_version(data_version_file=cfg.FDATA_VERSION):
     """Get data version in data/data_version.txt."""
     data_version = None
     try:
-        with open(data_version_file, "r") as f:
+        with open(data_version_file, "r", encoding="utf8") as f:
             data_version = f.readline().strip()
     except FileNotFoundError:
         pass
@@ -291,7 +291,7 @@ def get_data_version(data_version_file=cfg.FDATA_VERSION):
 
 def set_data_version(data_version_file=cfg.FDATA_VERSION):
     """Set data version in data/data_version.txt."""
-    with open(data_version_file, "w") as f:
+    with open(data_version_file, "w", encoding="utf8") as f:
         f.write(cfg.__version__)
 
 
@@ -309,7 +309,7 @@ def change_working_directory(path):
 # Fortran helpers
 def compile_lineofsight(los_f90=cfg.FLOS_F90, verbose=False):
     """Compile lineofsight module with numpy f2py. Error if no compiler."""
-    with open(los_f90) as f:
+    with open(los_f90, encoding="utf8") as f:
         src = f.read()
     failed = numpy.f2py.compile(
         src, "lineofsight", verbose=verbose, source_fn=los_f90
@@ -380,8 +380,8 @@ def get_ieg(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     inc = get_angle_between(ground, sun, True)
     em = get_angle_between(ground, sc, True)
     phase = get_angle_between(sun, sc, True)
-    sun_ground_az, sc_ground_az, sun_sc_az = get_local_az(ground, sun, sc)
-    return (inc, em, phase, sun_ground_az, sc_ground_az, sun_sc_az)
+    sun_sc_az = get_local_az(ground, sun, sc)
+    return (inc, em, phase, sun_sc_az)
 
 
 def get_ieg_xr(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
@@ -397,8 +397,8 @@ def get_ieg_xr(ground_zen, ground_az, sun_zen, sun_az, sc_zen, sc_az):
     inc = get_angle_between_xr(ground, sun, True)
     em = get_angle_between_xr(ground, sc, True)
     phase = get_angle_between_xr(sun, sc, True)
-    sun_ground_az, sc_ground_az, sun_sc_az = get_local_az_xr(ground, sun, sc)
-    return (inc, em, phase, sun_ground_az, sc_ground_az, sun_sc_az)
+    sun_sc_az = get_local_az_xr(ground, sun, sc)
+    return inc, em, phase, sun_sc_az
 
 
 def get_angle_between(vec1, vec2, safe_arccos=False):
@@ -448,7 +448,7 @@ def get_local_az(ground, sun, sc):
     sun_rel_ground = element_norm(element_triple_cross(ground, sun, ground))
     az = get_angle_between(sc_rel_ground, sun_rel_ground, True)
     az[((az < 0) & (az > 180)) | np.isnan(az)] = 0
-    return sun_rel_ground, sc_rel_ground, az
+    return az
 
 
 def get_local_az_xr(ground, sun, sc):
@@ -459,14 +459,14 @@ def get_local_az_xr(ground, sun, sc):
     sun_rel_ground = inc_rel_ground_xr(sun, ground)
     az = get_angle_between_xr(sc_rel_ground, sun_rel_ground, True)
     az = az.where(((az >= 0) & (az <= 180)))
-    return sun_rel_ground, sc_rel_ground, az
+    return az
 
 
 def inc_rel_ground_xr(vec, ground):
     """Return vec relative to ground vector."""
     cross = triple_cross_xr(ground, vec, ground)
     # Normalize vector by magnitude
-    mag = np.sqrt((cross ** 2).sum(dim="xyz"))
+    mag = np.sqrt((cross**2).sum(dim="xyz"))
     return cross / mag
 
 
@@ -593,7 +593,7 @@ def element_dot(A, B):
 def element_norm(A):
     """Return input array of vectors normalized to length 1."""
     A = as_cart3D([A])[0]
-    mag = np.sqrt(np.sum(A ** 2, axis=2))
+    mag = np.sqrt(np.sum(A**2, axis=2))
     return A / mag[:, :, np.newaxis]
 
 
@@ -621,7 +621,7 @@ def cart2pol(x, y):
     r: Distance from origin.
     theta: Angle, in radians.
     """
-    r = np.sqrt(x ** 2 + y ** 2)
+    r = np.sqrt(x**2 + y**2)
     theta = np.arctan2(y, x)
     return (r, theta)
 
@@ -701,8 +701,8 @@ def cart2sph(x, y, z):
     phi: Azimuthal angle [rad].
     radius: Radius.
     """
-    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
-    theta = np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
+    r = np.sqrt(x**2 + y**2 + z**2)
+    theta = np.arctan2(np.sqrt(x**2 + y**2), z)
     phi = np.arctan2(y, x)
     return (theta, phi, r)
 
