@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: 'Python 3.9.4 64-bit (''.venv'': poetry)'
 #     name: python3
@@ -701,7 +701,6 @@ plt.show()
 wl_xr = rh.np2xr(wl_all, ["wavelength"], [wl_all])
 btemps = re.btempw(wl_xr, emission).mean(("lat", "lon"))
 T_wl = add_wls_diviner(Tdiv)
-tloc = m3.get_m3_tloc(obs)
 
 f, ax = plt.subplots()
 left = btemps

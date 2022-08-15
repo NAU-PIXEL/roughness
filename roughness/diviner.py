@@ -9,7 +9,6 @@ import roughness.helpers as rh
 import roughness.emission as re
 
 
-SIGMA = 5.667e-8
 DIV_C = ("c3", "c4", "c5", "c6", "c7", "c8", "c9")
 DIV_WL_MIN = np.array([7.55, 8.10, 8.38, 13, 25, 50, 100])  # [microns]
 DIV_WL_MAX = np.array([8.05, 8.40, 8.68, 23, 41, 99, 400])  # [microns]
@@ -213,17 +212,40 @@ def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
     """
     Return tbol from Diviner C3-C9 brightness temperatures.
     """
-    temp = np.zeros(7)  # temps to use (in case divbt < tmin)
-    rad = np.zeros(7)
-    for i in range(7)[::-1]:  # Start at C9 and work backwards
-        if divbt[i] > tmin[i]:
-            temp[i] = divbt[i]
-        elif divbt[i] > 0:
-            temp[i] = temp[i + 1]  # Use bt from next channel over
-        else:
-            temp[i] = np.nan
-        rad[i] = SIGMA * temp[i] ** 4 * cfst(temp[i], wl1[i], wl2[i], iters[i])
-    tbol = (np.sum(rad) / SIGMA) ** 0.25
+
+    def f(wl, bt, n_iter):
+        """CFST iteration helper. n_iter small, so loop is faster"""
+        v = 1.43883e4 / (wl * bt)
+        tot = 0
+        for w in range(1, n_iter + 1):
+            tot += (
+                w**-4
+                * np.e ** -(w * v)
+                * (((w * v + 3) * w * v + 6) * w * v + 6)
+            )
+        return tot
+
+    def cfst(bt, wl1, wl2, n_iter=100):
+        """
+        Return fraction of Planck radiance between wl1 and wl2 at bt.
+
+        Translated from JB, via DAP via Houghton 'Physics of Atmospheres'
+        """
+        return 1.53989733e-1 * (f(wl2, bt, n_iter) - f(wl1, bt, n_iter))
+
+    vcfst = np.vectorize(cfst, otypes=[float])
+
+    # Backfill values below tmin from the next band over (C9->C3)
+    # Convenient to use pandas but overkill, maybe do numba func
+    temp = (
+        pd.Series(np.where(divbt >= tmin, divbt, np.nan))
+        .fillna(method="bfill")
+        .values
+    )
+
+    # Convert to radiance, weight by cfst, sum and convert back to temperature
+    rad = re.get_rad_sb(temp) * vcfst(temp, wl1, wl2, iters)
+    tbol = re.get_temp_sb(np.nansum(rad))
     return tbol
 
 
@@ -253,13 +275,11 @@ def load_div_filters(
 
 
 @lru_cache(1)
-def load_div_t2r(fdiv_t2r=FDIV_T2R, tmin=10, tmax=None):
+def load_div_t2r(fdiv_t2r=FDIV_T2R):
     """
     Return Diviner temperature to radiance lookup table.
     """
-    t2r = pd.read_csv(fdiv_t2r, index_col=0, header=0, delim_whitespace=True)
-    t2r = xr.DataArray(t2r, dims=["temperature", "band"], name="radiance")
-    return t2r.sel(temperature=slice(tmin, tmax), drop=True)
+    return pd.read_csv(fdiv_t2r, index_col=0, header=0, delim_whitespace=True)
 
 
 def divfilt_rad(wnrad, div_filt=None):
@@ -277,22 +297,39 @@ def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
     Return brightness temperatures from Diviner radiance (e.g. from div_filt).
     """
     t2r = load_div_t2r(fdiv_t2r)  # cached lookup
+    rad = divrad.values
+
+    # Mask negative values or those larger than max in each column of t2r
+    mask = rad < t2r.max(axis=0)
+
+    # Nanargmin gives the closest index (i.e. brightness temperature)
+    return np.nanargmin(np.abs(t2r - np.where(mask, rad, -1)), axis=0)
+
+
+def divrad2bt_interp(divrad, fdiv_t2r=FDIV_T2R):
+    """
+    Return brightness temperatures from Diviner radiance (e.g. from div_filt).
+    """
+    t2r = load_div_t2r(fdiv_t2r)  # cached lookup
+    rad = divrad.values
+    mask = (0 < rad) & (rad < t2r.max(axis=0))
+    rad = np.where(mask, rad, -1)
     dbt = np.zeros(len(divrad.band.values))
     for i, band in enumerate(divrad.band.values):
         # Interpolate lookup to convert radiance to brightness temperature
         dbt[i] = np.interp(
-            divrad.sel(band=band),  # desired x-coords (radiance)
-            t2r.sel(band=band),  # actual x-coords (radiance)
-            t2r.temperature,  # actual y-coords (temperature)
-            left=np.nan,
-            right=np.nan,
+            rad[i],  # desired x-coords (radiance)
+            t2r[band].values,  # actual x-coords (radiance)
+            t2r.index.values,  # actual y-coords (temperature)
         )
     return dbt
 
 
-def emission2tbol_xr(emission, wls, div_filt=None):
+def emission2tbol_xr(emission, wls=None, div_filt=None):
     """Return tbol from input emission array at wls."""
-    if not isinstance(wls, xr.DataArray):
+    if wls is None:
+        wls = emission.wavelength
+    elif not isinstance(wls, xr.DataArray):
         wls = rh.wl2xr(wls)
     wnrad = re.wlrad2wnrad(wls, emission)
     divrad = divfilt_rad(wnrad, div_filt)
@@ -303,23 +340,3 @@ def emission2tbol_xr(emission, wls, div_filt=None):
             div_bts = divrad2bt(divrad.isel({dim0: i, dim1: j}))
             tbol[i, j] = div_tbol(div_bts)
     return tbol
-
-
-def cfst(bt, wl1, wl2, n_iter=100):
-    """
-    Return fraction of Planck radiance between wl1 and wl2 at temp.
-
-    Translated from JB, via DAP via Houghton 'Physics of Atmospheres'
-    """
-
-    def f(wl, bt, n_iter=100):
-        """Iterative helper."""
-        v = 1.43883e4 / (wl * bt)
-        tot = 0
-        for w in range(1, n_iter + 1):
-            wv = w * v
-            ff = (w**-4) * (np.e**-wv) * (((wv + 3) * wv + 6) * wv + 6)
-            tot += ff
-        return tot
-
-    return 1.53989733e-1 * (f(wl2, bt, n_iter) - f(wl1, bt, n_iter))

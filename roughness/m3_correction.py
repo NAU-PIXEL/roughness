@@ -56,13 +56,24 @@ def m3_refl(basename, ext, wls=None, kwin=KWIN, kwre={}):
     kwin["dask"] = False
     obs = subset_m3xr_ext(get_m3xr(basename, "obs", **kwin), ext)
     alb = get_albedo_feng(obs.lon, obs.lat)
+    if isinstance(ext, dict):
+        ext = [
+            float(e)
+            for e in (
+                obs.lon.min(),
+                obs.lon.max(),
+                obs.lat.min(),
+                obs.lat.max(),
+            )
+        ]
     tloc = np.mean(get_tloc_range_spice(basename, ext[0], ext[1]))
+    ls = get_ls_spice(basename)  # Solar longitude (L_s)
     wls = get_m3_wls(basename) if wls is None else wls
     wls = rh.wl2xr(wls)
 
     # Get rough emission
     i, iaz, e, eaz, g = get_m3_geom_xr(obs, None)  # TODO: dem
-    args = (i, iaz, e, eaz, alb, wls, tloc)
+    args = (i, iaz, e, eaz, alb, wls, tloc, ls)
     if chunks:
         # emission = xr.map_blocks(get_emission_xr, i, args, kwre, template=(i*wls))
         # emission = emission.load()  # Compute emission on chunks with dask
@@ -109,7 +120,7 @@ def map_blocks(func, outda, *args, ind_dims=None, **kwargs):
     # Run in parallel
     with mp.Pool(NCPUS) as pool:
         args = zip(inds, it.repeat(args), it.repeat(kwargs))
-        out = pool.starmap(func, args)
+        out = pool.starmap(func, args, chunksize=1)
     # Get results
     for i, ind in enumerate(inds):
         # func(ind, args, kwargs)
@@ -117,7 +128,7 @@ def map_blocks(func, outda, *args, ind_dims=None, **kwargs):
     return outda
 
 
-def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, **kwargs):
+def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, ls, **kwargs):
     """Return emission [W/(m^2 um)]."""
     emission = xr.zeros_like(inc * wls)
     dorig = emission.dims
@@ -129,7 +140,7 @@ def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, **kwargs):
             geom = [da.isel(ind).values for da in [inc, iaz, em, eaz]]
             albedo = alb.isel(ind).values
             lat = inc.isel(ind).lat.values
-            tparams = {"tloc": tloc, "albedo": albedo, "lat": lat}
+            tparams = {"tloc": tloc, "albedo": albedo, "lat": lat, "ls": ls}
             emission[j, k] = re.rough_emission_lookup(
                 geom, wls, tparams=tparams, **kwargs
             )
@@ -1024,12 +1035,7 @@ def get_m3xr(basename, img, usgs=2, dask=False, chunks=None, xoak=False):
     )
 
     if img in ("rad", "ref"):
-        wls = get_m3_wls(basename)
-        da = (
-            da.assign_coords(wavelength=("band", wls))
-            .swap_dims({"band": "wavelength"})
-            .drop("band")
-        )
+        da = bands2wls(da, basename)
 
     # Not all attrs useful, some don't parse well from envi header
     da.attrs = {k: v for k, v in da.attrs.items() if k not in DROP_ATTRS}
@@ -1039,6 +1045,26 @@ def get_m3xr(basename, img, usgs=2, dask=False, chunks=None, xoak=False):
     # Set up lat / lon coords from loc backplane (if loc this is redundant)
     if img == "loc":
         return da
+    da = assign_loc(da, basename, usgs)
+
+    if xoak:
+        da = index_m3xoak(da)
+    return da
+
+
+def bands2wls(da, basename):
+    """Return da with M3 wavelength coordinate replacing bands."""
+    wls = get_m3_wls(basename)
+    da = (
+        da.assign_coords(wavelength=("band", wls))
+        .swap_dims({"band": "wavelength"})
+        .drop("band")
+    )
+    return da
+
+
+def assign_loc(da, basename, usgs=2):
+    """Return da with loc backplane assigned as 2D coords of (x, y)."""
     loc = get_m3xr(basename, "loc", usgs, dask=False, xoak=False)
     da = da.assign_coords(
         {
@@ -1047,24 +1073,37 @@ def get_m3xr(basename, img, usgs=2, dask=False, chunks=None, xoak=False):
         }
     )
     da.attrs["floc"] = loc.attrs["fimg"]
-
-    if xoak:
-        da = index_m3xoak(da)
     return da
 
 
-def subset_m3xr_ext(da, ext):
+def subset_m3xr_ext(da, ext, fill_bb=False):
     """
     Return m3 da subsetted to lat/lon ext [minlon, maxlon, minlat, maxlat].
     """
     warnings.filterwarnings("ignore")  # Dask chunk performance warning
-    subda = da.where(
-        (lon360(ext[0]) <= da.lon)
-        & (da.lon <= lon360(ext[1]))
-        & (ext[2] <= da.lat)
-        & (da.lat <= ext[3]),
-        drop=True,
-    )
+    if isinstance(ext, dict):
+        subda = da.sel(ext)
+    else:
+        subda = da.where(
+            (lon360(ext[0]) + 360 <= da.lon + 360)
+            & (da.lon + 360 <= lon360(ext[1]) + 360)
+            & (ext[2] <= da.lat)
+            & (da.lat <= ext[3]),
+            drop=True,
+        )
+    # if fill_bb: # TODO: fix
+    #     dims = list({*da.lon.dims} | {*da.lat.dims})  # {'y', 'x'} or {'lon', 'lat'}
+    #     dinds = [i for i, d in enumerate(subda.dims) if d in dims]
+    #     dmin = np.min(np.where(subda.notnull()), 1)[dinds]
+    #     dmax = np.max(np.where(subda.notnull()), 1)[dinds]
+    #     subda = da.where(
+    #         (dmin[0] <= da[dims[0]])
+    #         & (da[dims[0]] <= dmax[0])
+    #         & (dmin[1] <= da[dims[1]])
+    #         & (da[dims[1]] <= dmax[1]), drop=True
+    #     )
+    # sel = {d: slice(dmin[i], dmax[i]) for i, d in zip(dinds, dims)}
+    # subda = da.isel(sel)
     if subda.chunks is not None:
         chunks = {d: None for d in subda.dims}
         chunks["y"] = "auto"
@@ -1129,6 +1168,19 @@ def utc2lstmoon(utc, lon):
     return lst
 
 
+def utc2lsmoon(utc):
+    """
+    Return lunar solar longitude (L_s) [deg] from utc date using spiceypy.
+
+    Technically returns Earth's L_s since this is expected by KRC.
+    """
+    if spiceypy.ktotal("ALL") == 0:
+        furnsh_kernels()
+    et = spiceypy.str2et(utc)
+    ls = spiceypy.spiceypy.lspcn("EARTH", et, "NONE")
+    return np.rad2deg(ls)
+
+
 def lst2tloc(lst):
     """Return decimal local time [hr] from lst [hr,min,sec] (spice et2lst)."""
     return lst[0] + lst[1] / 60 + lst[2] / 3600
@@ -1154,6 +1206,12 @@ def get_tloc_range_spice(basename, minlon, maxlon=None):
         for lon in lons:
             tlocs.append(lst2tloc(utc2lstmoon(utc, lon)))
     return min(tlocs), max(tlocs)
+
+
+def get_ls_spice(basename):
+    """Return solar longitude (L_s) from basename."""
+    utc = m3basename2utc(basename)
+    return utc2lsmoon(utc)
 
 
 # def convert_axes(src, dst, nax=3):
@@ -1270,7 +1328,7 @@ def sel_nearest(da, coord, x):
     return nearest[0] if scalar else nearest
 
 
-def lin_contin(spec, wl1=2.4, wl2=2.6):
+def lin_contin(spec, wl1=2.537, wl2=2.657):
     """Return slope and intercept of linear continuum between wl1 and wl2."""
     wl1, wl2 = sel_nearest(spec, "wavelength", (wl1, wl2))
     slope = (spec.sel(wavelength=wl2) - spec.sel(wavelength=wl1)) / (wl2 - wl1)
@@ -1278,7 +1336,7 @@ def lin_contin(spec, wl1=2.4, wl2=2.6):
     return slope, intercept
 
 
-def contin_remove(spec, wl1=2.4, wl2=2.6, divide=True):
+def contin_remove(spec, wl1=2.537, wl2=2.657, divide=True):
     """Remove linear continuum fit between wl1 and wl2 from spec."""
     slope, intercept = lin_contin(spec, wl1, wl2)
     contin = slope * spec.wavelength + intercept
@@ -1287,10 +1345,13 @@ def contin_remove(spec, wl1=2.4, wl2=2.6, divide=True):
     return spec - contin
 
 
-def ohibd(spec, wl1=2.69673, wl2=2.93627):
-    """Return 3um Integrated Band Depth from spec between (wl1, wl2)."""
+def ibd3um(spec, wl1=2.697, wl2=2.936):
+    """
+    Return 3um Integrated Band Depth from spec between (wl1, wl2).
+    Equation 13 (Grumpe et al., 2019).
+    """
     wl1, wl2 = sel_nearest(spec, "wavelength", (wl1, wl2))
     spec_oh = spec.sel(wavelength=slice(wl1, wl2))
-    ibd = (1 - spec_oh).integrate("wavelength")
+    ibd = 100 * (1 - spec_oh).integrate("wavelength")
     dwl = wl2 - wl1
     return ibd / dwl
