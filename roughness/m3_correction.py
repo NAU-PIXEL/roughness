@@ -84,6 +84,9 @@ def m3_refl(basename, ext, wls=None, kwin=KWIN, kwre={}):
         )
     else:
         emission = get_emission_xr(*args, **kwre)
+    emission = emission.transpose(
+        "wavelength", "y", "x"
+    )  # TODO check order earlier
 
     # Remove emission from rad and convert to I/F
     rad = subset_m3xr_ext(get_m3xr(basename, "rad", **kwin), ext)
@@ -128,7 +131,7 @@ def map_blocks(func, outda, *args, ind_dims=None, **kwargs):
     return outda
 
 
-def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, ls, **kwargs):
+def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, ls, lat=None, **kwargs):
     """Return emission [W/(m^2 um)]."""
     emission = xr.zeros_like(inc * wls)
     dorig = emission.dims
@@ -138,12 +141,17 @@ def get_emission_xr(inc, iaz, em, eaz, alb, wls, tloc, ls, **kwargs):
         for k in range(len(emission[dim1])):
             ind = {dim0: j, dim1: k}
             geom = [da.isel(ind).values for da in [inc, iaz, em, eaz]]
+            if any([np.isnan(v) for v in geom]):
+                continue
             albedo = alb.isel(ind).values
-            lat = inc.isel(ind).lat.values
+            if lat is None:
+                lat = inc.isel(ind).lat.values
             tparams = {"tloc": tloc, "albedo": albedo, "lat": lat, "ls": ls}
+
             emission[j, k] = re.rough_emission_lookup(
                 geom, wls, tparams=tparams, **kwargs
             )
+        print(j, end=" ")
     # Transpose back to original axis order
     emission = emission.transpose(*dorig)
     return emission
@@ -387,11 +395,13 @@ def get_m3_wls(img):
     return np.array(wls) / 1000  # [nm] -> [microns]
 
 
-def get_solar_dist(basename, obs):
+def get_solar_dist(basename, obs=None):
     """
     Get the solar distance subtracted off of M3 obs band 6.
     """
     obs_header = get_m3_headers(basename, imgs="obs")
+    if obs is None:
+        obs = float(read_m3_image(obs_header.as_posix(), 0, 1, 0, 1)[:, :, 5])
     sdist = 1
     try:
         params = parse_envi_header(obs_header)
@@ -403,15 +413,17 @@ def get_solar_dist(basename, obs):
         print(w)
     if isinstance(obs, xr.DataArray):
         solar_dist = obs.sel(band=6).drop("band") + sdist
-    else:
+    elif isinstance(obs, np.ndarray):
         solar_dist = obs[:, :, 5] + sdist
+    else:
+        solar_dist = obs + sdist
     return solar_dist
 
 
 @lru_cache(2)
-def get_solar_spectrum(basename, m3ancpath=M3ANCPATH):
+def get_solar_spectrum(targeted=False, m3ancpath=M3ANCPATH):
     """Return m3 solar spectrum [W/(m^2 um)]."""
-    if is_targeted(basename):
+    if targeted:
         fss = Path(m3ancpath) / "targeted" / "M3T20110224_RFL_SOLAR_SPEC.TAB"
     else:
         fss = Path(m3ancpath) / "M3G20110224_RFL_SOLAR_SPEC.TAB"
@@ -423,7 +435,7 @@ def get_solar_spectrum(basename, m3ancpath=M3ANCPATH):
 def get_solar_spectrum_xr(basename, m3ancpath=M3ANCPATH):
     """Return m3 solar spectrum [W/(m^2 um)]."""
     ss = xr.DataArray(
-        get_solar_spectrum(basename, m3ancpath).squeeze(),
+        get_solar_spectrum(is_targeted(basename), m3ancpath).squeeze(),
         coords=[("wavelength", get_m3_wls(basename))],
     )
     return ss
@@ -432,7 +444,7 @@ def get_solar_spectrum_xr(basename, m3ancpath=M3ANCPATH):
 def get_solar_irradiance_xr(basename, obs):
     """Return m3 solar spectrum normalized by solar distance [W/(m^2 um)]."""
     solar_dist = get_solar_dist(basename, obs)
-    solar_spec = get_solar_spectrum_xr(is_targeted(basename))
+    solar_spec = get_solar_spectrum_xr(basename)
     L_sun = re.get_solar_irradiance(solar_spec, solar_dist)
     return L_sun
 
@@ -1170,7 +1182,7 @@ def utc2lstmoon(utc, lon):
 
 def utc2lsmoon(utc):
     """
-    Return lunar solar longitude (L_s) [deg] from utc date using spiceypy.
+    Return solar longitude (L_s) [deg] from utc date using spiceypy.
 
     Technically returns Earth's L_s since this is expected by KRC.
     """
@@ -1179,6 +1191,16 @@ def utc2lsmoon(utc):
     et = spiceypy.str2et(utc)
     ls = spiceypy.spiceypy.lspcn("EARTH", et, "NONE")
     return np.rad2deg(ls)
+
+
+def utc2sdistmoon(utc):
+    """Return solar distance [AU] from utc date using spiceypy."""
+    if spiceypy.ktotal("ALL") == 0:
+        furnsh_kernels()
+    et = spiceypy.utc2et(utc)
+    pos = spiceypy.spkpos("SUN", et, "J2000", "NONE", "MOON")[0]
+    sdist = spiceypy.convrt(spiceypy.vnorm(pos), "KM", "AU")
+    return sdist
 
 
 def lst2tloc(lst):
@@ -1314,7 +1336,13 @@ def get_spec(arr, wlmin=0, wlmax=1e5, wls=None):
 def get_avg_spec(img, wlmin=0, wlmax=1e5, wls=None):
     """Return the wavelengths and mean spectrum within the specified img array.
     Optionally specify min and max wavelengths to crop spectrum."""
-    arr = np.nanmean(img, axis=(0, 1))  # Average along z (spectral) axis
+    if isinstance(img, xr.DataArray):  # Average along wavelength dimension
+        try:
+            arr = img.mean(["x", "y"])
+        except ValueError:
+            arr = img.mean(["lon", "lat"])
+    else:
+        arr = np.nanmean(img, axis=(0, 1))  # Average along z (spectral) axis
     return get_spec(arr, wlmin, wlmax, wls)
 
 

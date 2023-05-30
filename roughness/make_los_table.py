@@ -212,7 +212,7 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, write=True, default=False):
     Cq[int(n / 2), int(n / 2)] = 0
 
     # This section imposes conjugate symmetry for  mag/phase input to ifft
-    Bq = np.sqrt(Cq / (pixelwidth ** 2 / ((n * n) * ((2 * np.pi) ** 2))))
+    Bq = np.sqrt(Cq / (pixelwidth**2 / ((n * n) * ((2 * np.pi) ** 2))))
     Bq = make_conj_sym(Bq, n)
 
     # Here is where we introduce the randon gaussian portion.
@@ -243,7 +243,7 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, write=True, default=False):
     zsurf = np.real_if_close(zsurf)
 
     # Because we are going to scale to various RMS slopes we want to normalize.
-    norm_zsurf = (zsurf - np.mean(zsurf)) / np.std(zsurf)
+    norm_zsurf = zsurf  # (zsurf - np.mean(zsurf)) / np.std(zsurf)
 
     # Voila. A real array of height values with self-affine roughness.
     # Save it!
@@ -453,7 +453,7 @@ def get_slope_aspect(dem, get_aspect=True):
 
     # Slope is returned in degrees through simple calculation.
     # No windowing is done (e.g. Horn's method).
-    slope = np.rad2deg(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
+    slope = np.rad2deg(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2)))
     if get_aspect:
         aspect = np.rad2deg(np.arctan2(-dz_dy, dz_dx))
         # Convert to clockwise about Y and restrict to (0, 360) from North
@@ -530,7 +530,7 @@ def get_rms(y):
     -------
     RMS (value): The RMS value.
     """
-    return np.sqrt(np.mean(y ** 2.0))
+    return np.sqrt(np.mean(y**2.0))
 
 
 # File I/O

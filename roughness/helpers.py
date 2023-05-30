@@ -407,6 +407,8 @@ def get_angle_between(vec1, vec2, safe_arccos=False):
 
     If vec1 or vec2 are NxMx3, compute element-wise.
     """
+    if isinstance(vec1, xr.DataArray) or isinstance(vec2, xr.DataArray):
+        return get_angle_between_xr(vec1, vec2, safe_arccos)
     dot = element_dot(vec1, vec2)
     if safe_arccos:
         # Restrict dot product to [-1, 1] to safely pass to arccos
@@ -532,12 +534,12 @@ def get_inc_az_from_subsolar(lon, lat, sslon, sslat):
 
     From calculator at https://the-moon.us/wiki/Sun_Angle
     """
-    dlon = np.deg2rad(lon - sslon)
-    lon, lat, sslon, sslat = (
+    lon, lat, sslon, sslat, dlon = (
         np.deg2rad(lon),
         np.deg2rad(lat),
         np.deg2rad(sslon),
         np.deg2rad(sslat),
+        np.deg2rad(lon - sslon),
     )
     inc = np.arccos(
         np.sin(sslat) * np.sin(lat)
@@ -664,6 +666,10 @@ def sph2cart(theta, phi, radius=1):
     -------
     cartesian (array): Cartesian vector(s), same shape as theta and phi.
     """
+    if isinstance(theta, xr.DataArray):
+        theta = theta.values
+    if isinstance(phi, xr.DataArray):
+        phi = phi.values
     return np.dstack(
         [
             radius * np.sin(theta) * np.cos(phi),

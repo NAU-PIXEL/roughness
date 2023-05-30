@@ -53,7 +53,8 @@ FZ_FACTORS = DATA_DIR / "zsurf_scale_factors.npy"
 FLOOKUP = DATA_DIR / "default_lookup.nc"
 FALBEDO = DATA_DIR / "Feng_et_al_2020_Lunar_bolometric_Bond_albedo.txt"
 # TLOOKUP = DATA_DIR / "temp_lookup.nc"
-TLOOKUP = "/home/ctaiudovicic/projects/MiscDebris/data/220801_ls_temp_table.nc"
+# TLOOKUP = DATA_DIR / "temp_lookup_220924.nc"
+TLOOKUP = DATA_DIR / "230302_temp_table.nc"
 
 
 # Paths (examples)

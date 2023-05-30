@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import roughness.m3_correction as m3
 
 # Configure plots
-plt.style.use("dark_background")
+# plt.style.use("dark_background")
+plt.style.use("seaborn-paper")
 CMAP = cm.get_cmap("magma").copy()
 CMAP.set_bad(color="gray")  # set nan color
 
@@ -39,7 +40,7 @@ def plot_slope_az_table(
     vmin (float): Minimum value for colorbar (default: None).
     vmax (float): Maximum value for colorbar (default: None).
     """
-    if ax is not None and ax.name != proj:
+    if ax is not None and proj is not None and ax.name != proj:
         msg = f"Ax type {ax.name} must match projection, {proj}."
         msg += " Redefine ax with projection or remove ax or projection from args."
         raise ValueError(msg)

@@ -132,6 +132,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Dask stuff
+dask-worker-space/
+
 # Adding in .hdf
 *.hdf
 

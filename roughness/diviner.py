@@ -236,12 +236,18 @@ def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
     vcfst = np.vectorize(cfst, otypes=[float])
 
     # Backfill values below tmin from the next band over (C9->C3)
-    # Convenient to use pandas but overkill, maybe do numba func
-    temp = (
-        pd.Series(np.where(divbt >= tmin, divbt, np.nan))
-        .fillna(method="bfill")
-        .values
-    )
+    temp = divbt.copy()
+    for i in range(len(divbt) - 1, -1, -1):
+        if divbt[i] < tmin[i]:
+            temp[i] = temp[i + 1]
+    if (temp <= 0).any():
+        return 0
+    # Convenient to use pandas but overkill, takes longer
+    # temp = (
+    #     pd.Series(np.where(divbt >= tmin, divbt, np.nan))
+    #     .fillna(method="bfill")
+    #     .values
+    # )
 
     # Convert to radiance, weight by cfst, sum and convert back to temperature
     rad = re.get_rad_sb(temp) * vcfst(temp, wl1, wl2, iters)
@@ -298,30 +304,21 @@ def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
     """
     t2r = load_div_t2r(fdiv_t2r)  # cached lookup
     rad = divrad.values
-
-    # Mask negative values or those larger than max in each column of t2r
     mask = rad < t2r.max(axis=0)
-
-    # Nanargmin gives the closest index (i.e. brightness temperature)
-    return np.nanargmin(np.abs(t2r - np.where(mask, rad, -1)), axis=0)
-
-
-def divrad2bt_interp(divrad, fdiv_t2r=FDIV_T2R):
-    """
-    Return brightness temperatures from Diviner radiance (e.g. from div_filt).
-    """
-    t2r = load_div_t2r(fdiv_t2r)  # cached lookup
-    rad = divrad.values
-    mask = (0 < rad) & (rad < t2r.max(axis=0))
     rad = np.where(mask, rad, -1)
     dbt = np.zeros(len(divrad.band.values))
-    for i, band in enumerate(divrad.band.values):
-        # Interpolate lookup to convert radiance to brightness temperature
-        dbt[i] = np.interp(
-            rad[i],  # desired x-coords (radiance)
-            t2r[band].values,  # actual x-coords (radiance)
-            t2r.index.values,  # actual y-coords (temperature)
-        )
+    for i, c in enumerate(divrad.band.values):
+        # Linearly interpolate between the two closest BT values
+        bt = np.searchsorted(t2r[c], rad[i])
+        if bt == 0:
+            dbt[i] = 0
+        else:
+            f = (rad[i] - t2r[c][bt - 1]) / (t2r[c][bt] - t2r[c][bt - 1])
+            dbt[i] = (bt - 1) * (1 - f) + bt * f
+
+        # np.interp is equivalent but slower
+        # numpy interp(desired x (rad), actual x (rad), actual y (temp))
+        # dbt[i] = np.interp(rad[i], t2r[c], t2r.index)
     return dbt
 
 
