@@ -78,8 +78,6 @@ $ python
 # The venv is located at ~/roughness/.venv/bin/python
 ```
 
-## Updating to the latest version
-
 ## Contribute
 
 This package is a work in progress. We appreciate any and all contributions in the form of bug reports & feature requests on our [issues](https://github.com/NAU-PIXEL/roughness/issues) page, or as pull requests (see [contributing guide](https://github.com/NAU-PIXEL/roughness/tree/main/CONTRIBUTING.md) for more details).
@@ -94,7 +92,7 @@ This package was created with [Cookiecutter](https://github.com/audreyr/cookiecu
 
 [MIT](https://github.com/NAU-PIXEL/roughness/tree/main/LICENSE). Learn more [here](https://tldrlegal.com/license/mit-license).
 
-Copyright (c) 2021, Christian J. Tai Udovicic
+Copyright (c) 2023, Christian J. Tai Udovicic
 
 ---
 

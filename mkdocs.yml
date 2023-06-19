@@ -1,26 +1,41 @@
 ---
 # Project Information
-site_name: roughness
+site_name: Roughness
+site_url: https://nau-pixel.github.io/roughness
 site_author: Christian Tai Udovicic
-site_description: Predict surface illumination accounting for roughness
+site_description: Documentation for the roughness python package.
 
 # Repository information
 repo_name: NAU-PIXEL/roughness
 repo_url: https://github.com/NAU-PIXEL/roughness
-edit_uri: ""
+edit_uri: "edit/main/docs/"
 
 # Copyright
-copyright: Copyright &copy; 2020 Christian Tai Udovicic
+copyright: Copyright &copy; 2023 Christian Tai Udovicic
 
 # Configuration
 theme:
   name: material
   icon:
     repo: fontawesome/brands/github
+    view: material/eye
   features:
     - navigation.instant
     - navigation.tabs
   language: en
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+      - docs/gen_api_pages.py
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [roughness]
+  - literate-nav:
+      nav_file: SUMMARY.md
 
 # Footer
 extra:
@@ -32,10 +47,15 @@ extra:
 # Page tree
 nav:
   - Home: index.md
+  - 'User Guide':
+    - 'Getting Started': 'getting_started.md'
+    - 'Examples': examples.md
+  - About: about.md
+  - Code Reference: reference/
 
 # Enable math (req. python-markdown-math)
 extra_javascript:
-  - javascript/config.js
+  - docs/javascript/config.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 

@@ -21,15 +21,25 @@ def rough_emission_lookup(
     """
     Return rough emission spectrum given geom and params to tlookup.
 
-    Parameters
-    ----------
-    geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
-    wls (arr): Wavelengths [microns]
-    rms (arr): RMS roughness [degrees]
-    rerad (bool): If True, include re-radiation from adjacent facets
-    tparams (dict): Dictionary of temperature lookup parameters
-    flookup (path or xarray): Facet lookup xarray or path to file.
-    tlookup (path or xarray): Temperature lookup xarray or path to file.
+    Parameters:
+        geom (list of float): Viewing geometry specified as four angles
+            (solar_incidence, solar_azimuth, view_emission, view_azimuth)
+        wls (arr): Wavelengths [microns]
+        rms (arr, optional): RMS roughness [degrees]. Default is 15.
+        rerad (bool, optional): If True, include re-radiation from adjacent
+            facets. Default is True.
+        tparams (dict, optional): Dictionary of temperature lookup parameters.
+            Default is None.
+        flookup (path, optional): Facet lookup xarray or path to
+            file. Default is None.
+        tlookup (path, optional): Temperature lookup xarray or path
+            to file. Default is None.
+        emissivity (float, optional): Emissivity. Default is 1.
+        cast_shadow_time (float, optional): Time spent in cast shadow as
+            fraction of one day. Default is 0.05.
+
+    Returns:
+        (xr.DataArray): Rough emission spectrum.
     """
     if tparams is None:
         tparams = {}  # TODO: raise more useful error here
@@ -102,15 +112,25 @@ def rough_emission_lookup_new(
     """
     Return rough emission spectrum given geom and params to tlookup.
 
-    Parameters
-    ----------
-    geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
-    wls (arr): Wavelengths [microns]
-    rms (arr): RMS roughness [degrees]
-    rerad (bool): If True, include re-radiation from adjacent facets
-    tparams (dict): Dictionary of temperature lookup parameters
-    flookup (path or xarray): Facet lookup xarray or path to file.
-    tlookup (path or xarray): Temperature lookup xarray or path to file.
+    Parameters:
+        geom (list of float): Viewing geometry specified as four angles
+            (solar_incidence, solar_azimuth, view_emission, view_azimuth)
+        wls (arr): Wavelengths [microns]
+        rms (arr, optional): RMS roughness [degrees]. Default is 15.
+        rerad (bool, optional): If True, include re-radiation from adjacent
+            facets. Default is True.
+        tparams (dict, optional): Dictionary of temperature lookup parameters.
+            Default is None.
+        flookup (path, optional): Facet lookup xarray or path to
+            file. Default is None.
+        tlookup (path, optional): Temperature lookup xarray or path
+            to file. Default is None.
+        emissivity (float, optional): Emissivity. Default is 1.
+        cast_shadow_time (float, optional): Time spent in cast shadow as
+            fraction of one day. Default is 0.05.
+
+    Returns:
+        (xr.DataArray): Rough emission spectrum.
     """
     if tparams is None:
         tparams = {}  # TODO: raise more useful error here
@@ -173,7 +193,18 @@ def rough_emission_lookup_new(
 
 def get_shadow_temp_new(temp_table, tparams, cst=0.5, tlookup=TLOOKUP):
     """
-    Return shadow temp scaled between current and dawn (coldest) temp.
+    Return cast shadow temperature using current and dawn (coldest)
+    temperatures and the cast shadow time, cst.
+
+    Parameters:
+        temp_table (ndarray): Temperature table.
+        tparams (dict): Dictionary of temperature lookup parameters.
+        cst (float, optional): Fraction of time since dawn. Default is 0.5.
+        tlookup (path, optional): Temperature lookup xarray or path
+            to file. Default is TLOOKUP.
+
+    Returns:
+        (np.ndarray): Cast shadow temperature table.
     """
     # Shadow age is cst fraction * time since dawn
     shadow_age = (tparams["tloc"] - 6) * cst
@@ -202,19 +233,21 @@ def get_shadow_temp_table(
     """
     Return shadow temperature for each facet in temp_illum.
 
-    Facets where solar inc > 90 degrees (shaded relief) retain the temp_table
-    value since the sun has simply set in thermal model.
+    Facets where solar incidence angle > 90 degrees (shaded relief) retain the
+    temp_table value since the sun has simply set in thermal model.
 
-    Facets where solar inc < 90 degrees (cast shadow) are set to a shadow
-    temperature following Bandfield et al. (2018).
+    Facets where solar incidence angle < 90 degrees (cast shadow) are set to a
+    shadow temperature following Bandfield et al. (2018).
 
-    Parameters
-    ----------
-    temp_table (xr.DataArray): Table of facet temperatures
-    sun_theta (num): Solar incidence angle
-    sun_az (num): Solar azimuth
-    tparams (dict): Dictionary of temperature lookup parameters
-    cst (num): Cast shadow time
+    Parameters:
+        temp_table (xr.DataArray): Table of facet temperatures.
+        sun_theta (float): Solar incidence angle.
+        sun_az (float): Solar azimuth.
+        tparams (dict): Dictionary of temperature lookup parameters.
+        cst (float): Cast shadow time.
+
+    Returns:
+        (np.ndarray): Shadow temperature table.
     """
     tshadow = get_shadow_temp_new(temp_table, tparams, cst, tlookup)
     # tshadow = get_shadow_temp(sun_theta, sun_az, tflat)
@@ -236,14 +269,12 @@ def get_temp_table(params, tlookup=None):
     """
     Return 2D temperature table of surface facets (inc, az).
 
-    Parameters
-    ----------
-    params (dict): Dictionary of temperature lookup parameters.
-    los_lookup (path or xarray): Los lookup xarray or path to file.
+    Parameters:
+        params (dict): Dictionary of temperature lookup parameters.
+        tlookup (path): Temperature lookup xarray or path to file.
 
-    Returns
-    -------
-    temp_table (2D array): Facet temperatures (dims: az, theta)
+    Returns:
+        (np.ndarray): Facet temperatures (dims: az, theta)
     """
     if tlookup is None:
         tlookup = TLOOKUP
@@ -259,20 +290,18 @@ def rough_emission_eq(
     radiative equillibrium. Uses ray-casting generated shadow_lookup table at
     sl_path.
 
-    Parameters
-    ----------
-    geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
-    wls (arr): Wavelengths [microns]
-    rms (arr): RMS roughness [degrees]
-    albedo (num): Hemispherical broadband albedo
-    emiss (num): Emissivity
-    solar_dist (num): Solar distance (au)
-    rerad (bool): If True, include re-radiation from adjacent facets
-    flookup (str): Los lookup path
+    Parameters:
+        geom (list of float): View geometry (sun_theta, sun_az, sc_theta, sc_az)
+        wls (arr): Wavelengths [microns]
+        rms (arr): RMS roughness [degrees]
+        albedo (num): Hemispherical broadband albedo
+        emissivity (num): Emissivity
+        solar_dist (num): Solar distance (au)
+        rerad (bool): If True, include re-radiation from adjacent facets
+        flookup (str): Los lookup path
 
-    Returns
-    -------
-    rough_emission (arr): Emission spectrum vs. wls [W m^-2]
+    Returns:
+        rough_emission (arr): Emission spectrum vs. wls [W m^-2]
     """
     sun_theta, sun_az, sc_theta, sc_az = geom
     if isinstance(wls, np.ndarray):
@@ -313,7 +342,23 @@ def rough_emission_eq(
 def get_facet_temp_illum_eq(
     shadow_table, sun_theta, sun_az, albedo, emiss, solar_dist, rerad=True
 ):
-    """Return temperatures of illuminated facets assuming rad eq"""
+    """
+    Return temperature of illuminated facets assuming radiative
+    equilibrium. Uses shadow_table generated by get_shadow_table.
+
+    Parameters:
+        shadow_table (ndarray): Shadow table.
+        sun_theta (float): Solar incidence angle.
+        sun_az (float): Solar azimuth.
+        albedo (float): Hemispherical broadband albedo.
+        emiss (float): Emissivity.
+        solar_dist (float): Solar distance (au).
+        rerad (bool, optional): If True, include re-radiation from adjacent
+            facets. Default is True.
+
+    Returns:
+        (np.ndarray): Facet temperatures.
+    """
     # Produce sloped facets at same resolution as shadow_table
     f_theta, f_az = rh.facet_grids(shadow_table)
     cinc = rn.get_facet_cos_theta(f_theta, f_az, sun_theta, sun_az)
@@ -339,17 +384,15 @@ def bb_emission_eq(sun_theta, wls, albedo, emiss, solar_dist):
     Return isothermal blackbody emission spectrum assuming radiative
     equilibrium.
 
-    Parameters
-    ----------
-    sun_theta (num): Solar incidence angle [deg]
-    wls (arr): Wavelengths [microns]
-    albedo (num): Hemispherical broadband albedo
-    emiss (num): Emissivity
-    solar_dist (num): Solar distance (au)
+    Parameters:
+        sun_theta (float): Solar incidence angle [deg].
+        wls (ndarray): Wavelengths [microns].
+        albedo (float): Hemispherical broadband albedo.
+        emiss (float): Emissivity.
+        solar_dist (float): Solar distance (au).
 
-    Return
-    ------
-    bb_emission (arr): Blackbody emission spectrum vs. wls [W m^-2]
+    Returns:
+        (np.ndarray): Blackbody emission spectrum vs. wls [W m^-2].
     """
     cinc = np.cos(np.deg2rad(sun_theta))
     albedo_array = get_albedo_scaling(sun_theta, albedo)
@@ -367,12 +410,11 @@ def cos_facet_sun_inc(surf_theta, surf_az, sun_theta, sun_az):
     If cinc < 0, angle b/t surf and sun is > 90 degrees. Limit these values to
     cinc = 0.
 
-    Parameters
-    ----------
-    surf_theta (num or arr): Surface slope(s) [deg]
-    surf_az (num or arr): Surface azimuth(s) [deg]
-    sun_theta (num): Solar incidence angle [deg]
-    sun_az (num): Solar azimuth from N [deg]
+    Parameters:
+        surf_theta (float | np.ndarray): Surface slope(s) in degrees.
+        surf_az (float | np.ndarray): Surface azimuth(s) in degrees.
+        sun_theta (float): Solar incidence angle in degrees.
+        sun_az (float): Solar azimuth from North in degrees.
     """
     facet_vec = rh.sph2cart(np.deg2rad(surf_theta), np.deg2rad(surf_az))
     target_vec = rh.sph2cart(np.deg2rad(sun_theta), np.deg2rad(sun_az))
@@ -397,11 +439,10 @@ def get_albedo_scaling(inc, albedo=0.12, a=None, b=None, mode="vasavada"):
             else: Use original a, b from Keihm (1984)
     Note: if a or b is supplied, both must be supplied and supercede mode
 
-    Parameters
-    ----------
-    albedo (num): Lunar average bond albedo (at inc=0)
-    inc (num or arr): Solar incidence angle [deg]
-    mode (str): Scale albedo based on published values of a, b
+    Parameters:
+        albedo (num): Lunar average bond albedo (at inc=0).
+        inc (num | arr): Solar incidence angle [deg].
+        mode (str): Scale albedo based on published values of a, b.
     """
     if a is not None and b is not None:
         pass
@@ -431,10 +472,9 @@ def emission_spectrum(emission_table, weight_table=None):
 
     Weight_table must have same slope, az coords as emission_table.
 
-    Parameters
-    ----------
-    emission_table (xr.DataArray): Table of radiance at each facet
-    weight_table (xr.DataArray): Table of facet weights
+    Parameters:
+        emission_table (xr.DataArray): Table of radiance at each facet.
+        weight_table (xr.DataArray): Table of facet weights.
     """
     if weight_table is None and isinstance(emission_table, xr.DataArray):
         weight_table = 1 / (len(emission_table.az) * len(emission_table.theta))
@@ -454,12 +494,11 @@ def get_emission_eq(cinc, albedo, emissivity, solar_dist):
     """
     Return radiated emission assuming radiative equillibrium.
 
-    Parameters
-    ----------
-    cinc (num): Cosine of solar incidence
-    albedo (num): Hemispherical broadband albedo
-    emissivity (num): Hemispherical broadband emissivity
-    solar_dist (num): Solar distance (au)
+    Parameters:
+        cinc (num): Cosine of solar incidence.
+        albedo (num): Hemispherical broadband albedo.
+        emissivity (num): Hemispherical broadband emissivity.
+        solar_dist (num): Solar distance (au).
     """
     f_sun = SC / solar_dist**2
     rad_eq = f_sun * cinc * (1 - albedo) / emissivity
@@ -628,16 +667,14 @@ def get_reradiation(
     Return emission incident on surf_theta from re-radiating adjacent level
     surfaces. Approximation from JB modified from downwelling radiance.
 
-    Parameters
-    ----------
-    cinc (num or arr): Cosine of solar incidence
-    surf_theta (num or arr): Surface slope(s) [deg]
-    surf_rad (num or arr): Surface radiance; e.g., from get_emission_eq()
-    albedo (num or arr): Albedo (hemispherical if num, scaled by cinc if array)
-    emissivity (num): Hemispherical broadband emissivity
-    solar_dist (num): Solar distance (au)
-    rad0 (num): Radiance of level surface facet
-    alb0 (num): Albedo of level surface facet
+    Parameters:
+        cinc (num | arr): Cosine of solar incidence.
+        surf_theta (num | arr): Surface slope(s) in degrees.
+        albedo (num | arr): Albedo (hemispherical if num, scaled by cinc if array).
+        emissivity (num): Hemispherical broadband emissivity.
+        solar_dist (num): Solar distance (au).
+        rad0 (num): Radiance of level surface facet.
+        alb0 (num): Albedo of level surface facet.
     """
     # Albedo scaled by angle b/t facet and level surface (e.g. surf_theta)
     # TODO: Why scale by alb_level / 0.12?
@@ -659,9 +696,8 @@ def get_temp_sb(rad):
     """
     Return temperature assuming the Stefan-Boltzmann Law given radiance.
 
-    Parameters
-    ----------
-    rad (num or arr): Radiance [W m^-2]
+    Parameters:
+        rad (num | arr): Radiance [W m^-2]
     """
     temp = (rad / SB) ** 0.25
     if isinstance(rad, xr.DataArray):
@@ -673,9 +709,8 @@ def get_rad_sb(temp):
     """
     Return radiance assuming the Stefan-Boltzmann Law given temperature.
 
-    Parameters
-    ----------
-    temp (num or arr): Temperature [K]
+    Parameters:
+        temp (num | arr): Temperature [K]
     """
     rad = SB * temp**4
     if isinstance(temp, xr.DataArray):
@@ -690,11 +725,10 @@ def get_shadow_temp(sun_theta, sun_az, temp0):
     Evening shadows are warmer than morning shadows. Tuned for lunar eqautor
     by Bandfield et al. (2015, 2018).
 
-    Parameters
-    ----------
-    sun_theta (num): Solar incidence angle [deg]
-    sun_az (num): Solar azimuth from N [deg]
-    temp0 (num): Temperature of illuminated level surface facet [K]
+    Parameters:
+        sun_theta (num): Solar incidence angle [deg]
+        sun_az (num): Solar azimuth from N [deg]
+        temp0 (num): Temperature of illuminated level surface facet [K]
     """
     shadow_temp_factor = 1
     if sun_theta >= 60 and 0 <= sun_az < 180:
@@ -716,12 +750,13 @@ def emission_2component(
     Return roughness emission spectrum at given wls given the temperature
     of illuminated and shadowed surfaces and fraction of the surface in shadow.
 
-    Parameters
-    ----------
-    wavelength (num or arr): Wavelength(s) [microns]
-    temp_illum (num or arr): Temperature(s) of illuminated fraction of surface
-    temp_shade (num or arr): Temperature(s) of shadowed fraction of surface
-    shadow_table (num or arr): Proportion(s) of surface in shadow
+    Parameters:
+        wavelength (num | arr): Wavelength(s) [microns]
+        temp_illum (num | arr): Temperature(s) of illuminated fraction of
+            surface
+        temp_shadow (num | arr): Temperature(s) of shadowed fraction of
+            surface
+        shadow_table (num | arr): Proportion(s) of surface in shadow
     """
     rad_illum = temp2rad(wavelength, temp_illum, emissivity)
     rad_shade = temp2rad(wavelength, temp_shadow, emissivity)
@@ -753,10 +788,9 @@ def get_solar_irradiance(solar_spec, solar_dist):
     Return solar irradiance from solar spectrum and solar dist
     assuming lambertian surface.
 
-    Parameters
-    ----------
-    solar_spec (arr): Solar spectrum [W m^-2 um^-1] at 1 au
-    solar_dist (num): Solar distance (au)
+    Parameters:
+        solar_spec (arr): Solar spectrum [W m^-2 um^-1] at 1 au
+        solar_dist (num): Solar distance (au)
     """
     return solar_spec / (solar_dist**2 * np.pi)
 
@@ -767,12 +801,11 @@ def get_rad_factor(rad, solar_irr, emission=None, emissivity=None):
     solar irradiance and emissivity. If no emissivity is supplied,
     assume Kirchoff's Law (eq. 6, Bandfield et al., 2018).
 
-    Parameters
-    ----------
-    rad (num or arr): Observed radiance [W m^-2 um^-1]
-    emission (num or arr): Emission to remove from rad [W m^-2 um^-1]
-    solar_irr (num or arr): Solar irradiance [W m^-2 um^-1]
-    emissivity (num or arr): Emissivity (if None, assume Kirchoff)
+    Parameters:
+        rad (num | arr): Observed radiance [W m^-2 um^-1]
+        emission (num | arr): Emission to remove from rad [W m^-2 um^-1]
+        solar_irr (num | arr): Solar irradiance [W m^-2 um^-1]
+        emissivity (num | arr): Emissivity (if None, assume Kirchoff)
     """
     emissivity = 1 if emissivity is None else emissivity
     if emission is not None and emissivity is None:
@@ -790,11 +823,10 @@ def bbr(wavenumber, temp, radunits="wn"):
 
     Translated from ff_bbr.c in davinci_2.22.
 
-    Parameters
-    ----------
-    wavenumber (num or arr): Wavenumber(s) to compute radiance at [cm^-1]
-    temp (num or arr): Temperatue(s) to compute radiance at [K]
-    radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
+    Parameters:
+        wavenumber (num | arr): Wavenumber(s) to compute radiance at [cm^-1]
+        temp (num | arr): Temperatue(s) to compute radiance at [K]
+        radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
     """
     # Derive Planck radiation constants a and b from h, c, Kb
     a = 2 * HC * CCM**2  # [J cm^2 / s] = [W cm^2]
@@ -819,10 +851,9 @@ def bbrw(wavelength, temp, radunits="wl"):
     """
     Return blackbody radiance at given wavelength(s) and temp(s).
 
-    Parameters
-    ----------
-    wavelength (num or arr): Wavelength(s) to compute radiance at [microns]
-    temp (num or arr): Temperatue(s) to compute radiance at [K]
+    Parameters:
+        wavelength (num | arr): Wavelength(s) to compute radiance at [microns]
+        temp (num | arr): Temperatue(s) to compute radiance at [K]
     """
     return bbr(wl2wn(wavelength), temp, radunits)
 
@@ -855,10 +886,9 @@ def wnrad2wlrad(wavenumber, rad):
     """
     Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr um).
 
-    Parameters
-    ----------
-    wn (num or arr): Wavenumber(s) [cm^-1]
-    wnrad (num or arr): Radiance in terms of wn [W/(cm^2 sr cm^-1)]
+    Parameters:
+        wavenumber (num | arr): Wavenumber(s) [cm^-1]
+        rad (num | arr): Radiance in terms of wn units [W/(cm^2 sr cm^-1)]
     """
     wavenumber_microns = wavenumber * 1e-4  # [cm-1] -> [um-1]
     rad_microns = rad * 1e4  # [1/cm-1] -> [1/um-1]

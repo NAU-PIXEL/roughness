@@ -1,37 +1,12 @@
-# roughness
+# Roughness
 
-Predict illumination of planetary surfaces accounting for roughness.
+<!-- Badges: Zenodo DOI, GitHub Actions Tests, Docs -->
+<a href="https://zenodo.org/badge/latestdoi/328820617"><img src="https://zenodo.org/badge/328820617.svg" alt="DOI"></a>
+<a href="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/code_quality_checks.yml/badge.svg" alt="Code Quality and Tests"></a>
+<a href="https://nau-pixel.github.io/roughness/"><img src="https://github.com/NAU-PIXEL/roughness/actions/workflows/docs_publish.yml/badge.svg" alt="Documentation"></a>
 
+A python package for predicting the emission from a rough planetary surface.
 
-## Types of roughness
+## License
 
-### Gaussian RMS (Shepard et al., 1995)
-
-RMS roughness is given by equation 13 in Shepard et al. (1995).
-
-$P(\theta) =\frac{tan\theta}{\bar{tan\theta}^2} exp(\frac{-tan^2 \theta}{2 tan^2 \bar{\theta}})$
-
-![RMS slope distributions](img/rms_slopes.png)
-
-### Theta-bar (Hapke, 1984)
-
-Theta-bar roughness is computed using equation 44 in Hapke (1984). It is given by:
-
-$P(\theta) = A sec^2 \theta \ sin \theta \ exp(-tan^2 \theta / B tan^2 \bar{\theta})$
-
-Where $A = \frac{2}{\pi tan^2 \bar{\theta}}$, and $B = \pi$. This reduces to:
-
-
-$P(\theta) = \frac{2}{\pi tan^2 \bar{\theta}} \ sec^2 \theta \ sin \ \theta \ exp(\frac{-tan^2 \theta}{\pi tan^2 \bar{\theta}})$
-
-$P(\theta) = \frac{2sin \theta}{\pi tan^2 \bar{\theta} \ cos^2 \theta} \ exp(\frac{-tan^2 \theta}{\pi tan^2 \bar{\theta}})$
-
-![Theta-bar slope distributions](img/tbar_slopes.png)
-
-## Accounting for viewing angle
-
-The emission angle and azimuth the surface is viewed from will change the distribution of slopes observed.
-
-For example, when viewed from the North (azimuth=0$^o$) and an emission angle of 30$^o$, we expect to see more North facing slopes than South facing, with the difference being more pronounced at higher roughness values.
-
-![visible slope distributions](img/vis_slopes.png)
+This project is licensed under the terms of the MIT open [license](https://github.com/NAU-PIXEL/roughness/blob/main/LICENSE). See [Zenodo](https://zenodo.org/badge/latestdoi/328820617) for citation information.

@@ -509,7 +509,7 @@ def tloc_to_inc(tloc, lat=0, az=False):
     Parameters
     ----------
     tloc: (float)
-        Local time [0, 24] [hrs]
+        Local time (0, 24) [hrs]
     lat: (float)
         Latitude (-90, 90) [deg]
 
