@@ -28,6 +28,7 @@ rioxarray = "^0.11.1"
 xarray = "^2022.3.0"
 dask = "^2022.6.1"
 distributed = "^2022.6.1"
+zenodo-get = "^1.3.4"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs-material = "^6.1.5"
@@ -41,6 +42,10 @@ jupytext = "^1.11.2"
 pre-commit = "^2.13.0"
 xoak = "^0.1.1"
 spiceypy = "^5.0.1"
+mkdocs = "^1.4.3"
+
+[tool.poetry.scripts]
+roughness = "roughness.cli:run"
 
 [tool.black]
 line-length=79

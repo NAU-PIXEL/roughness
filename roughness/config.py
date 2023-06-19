@@ -2,6 +2,9 @@
 from pathlib import Path
 from . import __version__
 
+# Data sources
+ZENODO_DOI = "https://doi.org/10.5281/zenodo.8056764"
+
 # Constants
 SC = 1360  # Solar constant at 1 au [W/m^2]
 SB = 5.6703271e-8  # Stephan Boltzmann constant [W m^-2 K^-4]
@@ -52,10 +55,7 @@ FZSURF = DATA_DIR / "zsurf.npy"
 FZ_FACTORS = DATA_DIR / "zsurf_scale_factors.npy"
 FLOOKUP = DATA_DIR / "default_lookup.nc"
 FALBEDO = DATA_DIR / "Feng_et_al_2020_Lunar_bolometric_Bond_albedo.txt"
-# TLOOKUP = DATA_DIR / "temp_lookup.nc"
-# TLOOKUP = DATA_DIR / "temp_lookup_220924.nc"
-TLOOKUP = DATA_DIR / "230302_temp_table.nc"
-
+TLOOKUP = DATA_DIR / "temp_lookup_moon.nc"
 
 # Paths (examples)
 FIG_SLOPE_DIST_SHEP = FIGURES_DIR / "slope_dist_shepard.png"
