@@ -31,24 +31,13 @@
   </span>
 </div>
 
-A python package for predicting the illumination and shadowing conditions on a rough planetary surface.
+A python package for predicting the thermal emission from anisothermal rough planetary surfaces.
 
-## Features
+## Documentation
 
-- Generate rough surface slope distributions
+See full documentation at [nau-pixel.github.io/roughness](https://nau-pixel.github.io/roughness/)
 
-![Gaussian slope distribution](./docs/img/rms_slopes.png)
-
-- Adjust for viewing geometry
-
-![Viewing geometry corrected distribution](./docs/img/vis_slopes.png)
-
-- Predict the shadowed fraction of the surface given solar incidence, roughness, and viewing geometry
-
-![Shadow distribution](./docs/img/shadow_fraction.png)
-
-- Full documentation: [nau-pixel.github.io/roughness](https://nau-pixel.github.io/roughness/)
-- Example notebooks coming soon!
+See usage examples at [nau-pixel.github.io/roughness/examples](https://nau-pixel.github.io/roughness/examples/)
 
 ## Installation
 
@@ -82,20 +71,14 @@ $ python
 
 This package is a work in progress. We appreciate any and all contributions in the form of bug reports & feature requests on our [issues](https://github.com/NAU-PIXEL/roughness/issues) page, or as pull requests (see [contributing guide](https://github.com/NAU-PIXEL/roughness/tree/main/CONTRIBUTING.md) for more details).
 
-## Credits
+## References and citation
 
 This package is adapted from code by the late Dr. J. L. Bandfield. You can read more about the first iterations of this code in [Bandfield et al. (2015)](https://doi.org/10.1016/j.icarus.2014.11.009) and [Bandfield et al. (2018)](https://doi.org/10.1038/s41561-018-0065-0).
 
-This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [`mgancita/cookiecutter-pypackage`](https://mgancita.github.io/cookiecutter-pypackage/) project template.
+Please cite this software using the DOI of the latest version provided on [Zenodo](https://doi.org/10.5281/zenodo.5498089).
 
 ## License
 
 [MIT](https://github.com/NAU-PIXEL/roughness/tree/main/LICENSE). Learn more [here](https://tldrlegal.com/license/mit-license).
 
 Copyright (c) 2023, Christian J. Tai Udovicic
-
----
-
-> CV [cjtu.github.io](https://cjtu.github.io) &nbsp;&middot;&nbsp;
-> GitHub [@cjtu](https://github.com/cjtu) &nbsp;&middot;&nbsp;
-> Twitter [@TaiUdovicic](https://twitter.com/TaiUdovicic)
