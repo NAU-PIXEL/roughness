@@ -20,3 +20,6 @@ except PackageNotFoundError:  # pragma: no cover
 
 __author__ = "Christian J. Tai Udovicic"
 __email__ = "cj.taiudovicic@gmail.com"
+
+# Import classes
+from .classes import RoughnessThermalModel  # pylint: disable=C0413

@@ -16,55 +16,41 @@ The roughness package can be installed using pip:
 pip install roughness
 ```
 
+## Roughness workflow
+
+The roughness thermophysical model requires 3 main components:
+
+1. The `roughness` python` package
+2. A raytracing shadowing lookup table
+3. A surface temperature lookup table
+
+The `roughness` package can fetch pre-generated shadowing and temperature lookup tables that were derived and validated for the Moon. Custom shadowing tables can be generated using the roughness package, and custom surface temperature tables can be generated with an arbitrary thermal model (but must be saved in xarray-readable format).
+
 ## Downloading the lookup tables
 
-With roughness installed, navigate to your desired data directory and download the pre-generated lookup tables from Zenodo with:
+With roughness installed, download the pre-generated lunar shadowing and tempeature lookup tables with:
 
 ```bash
-cd /path/to/roughness_data
 roughness -d
 ```
 
+Calling this command again will check for updates and download new tables only if an update is available.
+
 ## Running the roughness thermophysical model
 
-The roughness thermophysical model can be run from Python by importing the roughness package and supplying the required geometry to the rough_emission function:
+The roughness thermophysical model can be run from Python by importing the `RoughnessThermalModel` object from the roughness package and supplying the required geometry:
 
 ```python
-import roughness
-roughess.rough_emission(geometry, wavelengths, rms, tparams)
+from roughness import RoughnessThermalModel
+rtm = RoughnessThermalModel()  # Init with default lookup tables
+geometry = (30, 0, 60, 0)  # inc, inc_az, emit, emit_az [degrees]
+wavelengths = np.arange(1, 100)  # [microns]
+rms = 25  # RMS roughness [degrees]
+print(rtm.required_tparams)
+# {'albedo', 'lat', 'ls', 'tloc'}
+tparams = {'albedo': 0.12, 'lat': 0, 'ls': 0, 'tloc': 12}  # temp table params
+emission = rtm.emission(geometry, wavelengths, rms, tparams)  # returns xarray
+emission.plot() # Plot emitted radiance vs. wavelength
 ```
 
 For more examples, see the [examples](examples.md) page.
-
-## Roughness Primer: Types of roughness
-
-### Gaussian RMS (Shepard et al., 1995)
-
-RMS roughness is given by equation 13 in Shepard et al. (1995).
-
-$P(\theta) =\frac{tan\theta}{\bar{tan\theta}^2} exp(\frac{-tan^2 \theta}{2 tan^2 \bar{\theta}})$
-
-![RMS slope distributions](img/rms_slopes.png)
-
-### Theta-bar (Hapke, 1984)
-
-Theta-bar roughness is computed using equation 44 in Hapke (1984). It is given by:
-
-$P(\theta) = A sec^2 \theta \ sin \theta \ exp(-tan^2 \theta / B tan^2 \bar{\theta})$
-
-Where $A = \frac{2}{\pi tan^2 \bar{\theta}}$, and $B = \pi$. This reduces to:
-
-
-$P(\theta) = \frac{2}{\pi tan^2 \bar{\theta}} \ sec^2 \theta \ sin \ \theta \ exp(\frac{-tan^2 \theta}{\pi tan^2 \bar{\theta}})$
-
-$P(\theta) = \frac{2sin \theta}{\pi tan^2 \bar{\theta} \ cos^2 \theta} \ exp(\frac{-tan^2 \theta}{\pi tan^2 \bar{\theta}})$
-
-![Theta-bar slope distributions](img/tbar_slopes.png)
-
-### Accounting for viewing angle
-
-The emission angle and azimuth the surface is viewed from will change the distribution of slopes observed.
-
-For example, when viewed from the North (azimuth=0$^o$) and an emission angle of 30$^o$, we expect to see more North facing slopes than South facing, with the difference being more pronounced at higher roughness values.
-
-![visible slope distributions](img/vis_slopes.png)

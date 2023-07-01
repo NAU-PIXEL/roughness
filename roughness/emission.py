@@ -6,6 +6,8 @@ import roughness.helpers as rh
 import roughness.roughness as rn
 from roughness.config import SB, SC, CCM, KB, HC, TLOOKUP
 
+xr.set_options(keep_attrs=True)
+
 
 def rough_emission_lookup(
     geom,
@@ -55,7 +57,7 @@ def rough_emission_lookup(
     # Get illum and shadowed facet temperatures
     temp_table = get_temp_table(tparams, tlookup)
     tflat = temp_table.sel(theta=0, az=0).values
-    tvert = temp_table.sel(theta=90).interp(az=sun_az).values
+    # tvert = temp_table.sel(theta=90).interp(az=sun_az).values
     temp_table = temp_table.interp_like(shadow_table)
     temp_shade = get_shadow_temp_table(
         temp_table, sun_theta, sun_az, tparams, cast_shadow_time, tlookup
@@ -67,10 +69,9 @@ def rough_emission_lookup(
         if "albedo" in tparams:
             albedo = tparams["albedo"]
         rerad = get_reradiation_jb(sun_theta, rad_table.theta, tflat, albedo)
-        # rerad = get_reradiation_alt(rad_table, sun_theta, sun_az, tflat, tvert, albedo, emissivity)
-        rerad_new = get_reradiation_new(tflat, albedo, emissivity)
-        # print([f'{float(v):.0f}' for v in [rerad.sum(), rerad_jb.sum(), rerad.median(), rerad_jb.median(), 100*(rad_table/rerad).median(), 100*(rad_table/rerad_jb).median()]])
-
+        # rerad = get_reradiation_alt(rad_table, sun_theta, sun_az, tflat,
+        #                             tvert, albedo, emissivity)
+        # rerad_new = get_reradiation_new(tflat, albedo, emissivity)
         temp_table = get_temp_sb(rad_table + rerad)
         temp_shade = get_temp_sb(rad_shade + rerad)
 
@@ -484,6 +485,7 @@ def emission_spectrum(emission_table, weight_table=None):
     if isinstance(emission_table, xr.DataArray):
         weighted = emission_table.weighted(weight_table.fillna(0))
         spectrum = weighted.sum(dim=("az", "theta"))
+        spectrum.name = "Radiance [W/m²/sr/μm]"
     else:
         weighted = emission_table * weight_table
         spectrum = np.sum(weighted, axis=(0, 1))
@@ -503,7 +505,7 @@ def get_emission_eq(cinc, albedo, emissivity, solar_dist):
     f_sun = SC / solar_dist**2
     rad_eq = f_sun * cinc * (1 - albedo) / emissivity
     if isinstance(cinc, xr.DataArray):
-        rad_eq.name = "Radiance [W m^-2]"
+        rad_eq.name = "Radiance [W/m²]"
     return rad_eq
 
 
@@ -789,7 +791,7 @@ def get_solar_irradiance(solar_spec, solar_dist):
     assuming lambertian surface.
 
     Parameters:
-        solar_spec (arr): Solar spectrum [W m^-2 um^-1] at 1 au
+        solar_spec (arr): Solar spectrum [W m^-2 μm^-1] at 1 au
         solar_dist (num): Solar distance (au)
     """
     return solar_spec / (solar_dist**2 * np.pi)
@@ -802,9 +804,9 @@ def get_rad_factor(rad, solar_irr, emission=None, emissivity=None):
     assume Kirchoff's Law (eq. 6, Bandfield et al., 2018).
 
     Parameters:
-        rad (num | arr): Observed radiance [W m^-2 um^-1]
-        emission (num | arr): Emission to remove from rad [W m^-2 um^-1]
-        solar_irr (num | arr): Solar irradiance [W m^-2 um^-1]
+        rad (num | arr): Observed radiance [W m^-2 μm^-1]
+        emission (num | arr): Emission to remove from rad [W m^-2 μm^-1]
+        solar_irr (num | arr): Solar irradiance [W m^-2 μm^-1]
         emissivity (num | arr): Emissivity (if None, assume Kirchoff)
     """
     emissivity = 1 if emissivity is None else emissivity
@@ -819,14 +821,14 @@ def bbr(wavenumber, temp, radunits="wn"):
     Return blackbody radiance at given wavenumber(s) and temp(s).
 
     Units='wn' for wavenumber: W/(m^2 sr cm^-1)
-          'wl' for wavelength: W/(m^2 sr um)
+          'wl' for wavelength: W/(m^2 sr μm)
 
     Translated from ff_bbr.c in davinci_2.22.
 
     Parameters:
         wavenumber (num | arr): Wavenumber(s) to compute radiance at [cm^-1]
         temp (num | arr): Temperatue(s) to compute radiance at [K]
-        radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: um)
+        radunits (str): Return units in terms of wn or wl (wn: cm^-1; wl: μm)
     """
     # Derive Planck radiation constants a and b from h, c, Kb
     a = 2 * HC * CCM**2  # [J cm^2 / s] = [W cm^2]
@@ -843,7 +845,7 @@ def bbr(wavenumber, temp, radunits="wn"):
         warnings.simplefilter("ignore")
         rad = (a * wavenumber**3) / (np.exp(b * wavenumber / temp) - 1.0)
     if radunits == "wl":
-        rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr um)]
+        rad = wnrad2wlrad(wavenumber, rad)  # [W/(cm^2 sr μm)]
     return rad
 
 
@@ -868,7 +870,7 @@ def btemp(wavenumber, radiance, radunits="wn"):
     a = 2 * HC * CCM**2  # [J cm^2 / s] = [W cm^2]
     b = HC * CCM / KB  # [cm K]
     if radunits == "wl":
-        # [W/(cm^2 sr um)] -> [W/(cm^2 sr cm^-1)]
+        # [W/(cm^2 sr μm)] -> [W/(cm^2 sr cm^-1)]
         radiance = wlrad2wnrad(wn2wl(wavenumber), radiance)
     T = (b * wavenumber) / np.log(1.0 + (a * wavenumber**3 / radiance))
     return T
@@ -884,41 +886,41 @@ def btempw(wavelength, radiance, radunits="wl"):
 
 def wnrad2wlrad(wavenumber, rad):
     """
-    Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr um).
+    Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr μm).
 
     Parameters:
         wavenumber (num | arr): Wavenumber(s) [cm^-1]
         rad (num | arr): Radiance in terms of wn units [W/(cm^2 sr cm^-1)]
     """
-    wavenumber_microns = wavenumber * 1e-4  # [cm-1] -> [um-1]
-    rad_microns = rad * 1e4  # [1/cm-1] -> [1/um-1]
-    return rad_microns * wavenumber_microns**2  # [1/um-1] -> [1/um]
+    wavenumber_microns = wavenumber * 1e-4  # [cm-1] -> [μm-1]
+    rad_microns = rad * 1e4  # [1/cm-1] -> [1/μm-1]
+    return rad_microns * wavenumber_microns**2  # [1/μm-1] -> [1/μm]
 
 
 def wlrad2wnrad(wl, wlrad):
     """
-    Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr um).
+    Convert radiance from units W/(cm2 sr cm-1) to W/(cm2 sr μm).
     """
-    wn = 1 / wl  # [um] -> [um-1]
-    wnrad = wlrad / wn**2  # [1/um] -> [1/um-1]
-    return wnrad * 1e-4  # [1/um-1] -> [1/cm-1]
+    wn = 1 / wl  # [μm] -> [μm-1]
+    wnrad = wlrad / wn**2  # [1/μm] -> [1/μm-1]
+    return wnrad * 1e-4  # [1/μm-1] -> [1/cm-1]
 
 
 def wn2wl(wavenumber):
-    """Convert wavenumber (cm-1) to wavelength (um)."""
+    """Convert wavenumber (cm-1) to wavelength (μm)."""
     return 10000 / wavenumber
 
 
 def wl2wn(wavelength):
-    """Convert wavelength (um) to wavenumber (cm-1)."""
+    """Convert wavelength (μm) to wavenumber (cm-1)."""
     return 10000 / wavelength
 
 
 def cmrad2mrad(cmrad):
-    """Convert radiance from units W/(cm2 sr cm-1) to W/(m2 sr cm-1)."""
-    return cmrad * 1e4  # [W/(cm^2 sr um)] -> [W/(m^2 sr um)]
+    """Convert radiance from units W/(cm^2 sr μm) to W/(m^2 sr μm)."""
+    return cmrad * 1e4  # [W/(cm^2 sr μm)] -> [W/(m^2 sr μm)]
 
 
 def mrad2cmrad(mrad):
-    """Convert radiance from units W/(m2 sr cm-1) to W/(cm2 sr cm-1)."""
-    return mrad * 1e-4  # [W/(m^2 sr um)] -> [W/(cm^2 sr um)]
+    """Convert radiance from units W/(m^2 sr μm) to W/(cm^2 sr μm)."""
+    return mrad * 1e-4  # [W/(m^2 sr μm)] -> [W/(cm^2 sr μm)]

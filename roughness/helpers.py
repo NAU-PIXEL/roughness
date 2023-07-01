@@ -79,7 +79,7 @@ def np2xr(arr, dims=None, coords=None, name=None, cnames=None, cunits=None):
     return da
 
 
-def wl2xr(arr, units="microns"):
+def wl2xr(arr, units="μm"):
     """Return wavelength numpy array as xarray."""
     da = xr.DataArray(arr, coords=[("wavelength", arr)])
     da.coords["wavelength"].attrs["long_name"] = "Wavelength"
@@ -95,7 +95,7 @@ def wn2xr(arr, units="cm^-1"):
     return da
 
 
-def spec2xr(arr, wls, units="W/m^2/sr/um", wl_units="microns"):
+def spec2xr(arr, wls, units="W/m²/sr/μm", wl_units="μm"):
     """Return spectral numpy array as xarray."""
     da = xr.DataArray(arr, coords=[wls], dims=["wavelength"], name="Radiance")
     da.attrs["units"] = units
