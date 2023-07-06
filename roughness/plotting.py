@@ -30,13 +30,13 @@ def plot_slope_az_table(
     """
     Plot a 2D line-of-sight table with facet slope vs facet azimuth.
 
-    Args:
+    Parameters:
         table (ndarray): A 2D array of slope vs azimuth.
         cmap_r (bool, optional): Use a reverse colormap. Default is False.
         clabel (str, optional): Label for the colorbar. Default is an empty
             string.
-        ax (matplotlib.axes.Axes, optional): The axes to plot on. If not
-            provided, a new axes will be generated.
+        ax (matplotlib.axes.Axes, optional): Axes to plot on. If not provided, 
+            a new Axes object will be generated.
         proj (str, optional): The projection to use. Valid values are 'polar'
             and None. Default is None.
         vmin (float, optional): The minimum value for the colorbar. Default is
@@ -122,30 +122,14 @@ def m3_imshow(
     Use imshow to display an M3 image. Specify wavelength, wl, to show the
     closest channel to that wavelength.
 
-    Parameters
-    ----------
-    img : ndarray
-        M3 image.
-    xmin : int
-        Minimum x index to plot.
-    xmax : int
-        Maximum x index to plot.
-    ymin : int
-        Minimum y index to plot.
-    ymax : int
-        Maximum y index to plot.
-    wl : int, optional
-        Wavelength to show. Default is 750.
-    ax : matplotlib.axes.Axes, optional
-        Axes to plot on. If not provided, a new axes will be generated.
-    title : str, optional
-        Plot title. Default is None.
-    cmap : str, optional
-        Colormap. Default is "gray".
-
-    Returns
-    -------
-    None
+    Parameters:
+        img (ndarray): M3 image.
+        xmin, xmax, ymin, ymax (int): The x and y index ranges to plot.
+        wl (int, optional): Wavelength to show, gets nearest (default: 750nm).
+        ax (matplotlib.axes.Axes, optional): Axes to plot on. If not provided, 
+            a new Axes object will be generated.
+        title (str, optional): Plot title (default: '')
+        cmap (str, optional): Colormap (default: "gray").
     """
     band = 0 if len(img.shape) > 2 else None
     if ax is None:
@@ -163,22 +147,13 @@ def m3_spec(img, fmt="-", wls=None, ax=None, title=None, **kwargs):
     """
     Plot M3 spectrum.
 
-    Parameters
-    ----------
-    img : ndarray
-        M3 image.
-    fmt : str, optional
-        Plot format. Default is '-' for line.
-    wls : ndarray, optional
-        Wavelengths to plot. Default is all.
-    ax : matplotlib.axes.Axes, optional
-        Axes to plot on. If not provided, a new axes will be generated.
-    title : str, optional
-        Plot title. Default is None.
-
-    Returns
-    -------
-    None
+    Parameters:
+        img (ndarray): M3 image.
+        fmt (str, optional): Plot format (default: '-' for line).
+        wls (ndarray, optional): Wavelengths to plot (default: all).
+        ax (matplotlib.axes.Axes, optional): Axes to plot on. If not provided, 
+            a new Axes object will be generated.
+        title (str, optional): Plot title (default: '')
     """
     if title is None:
         title = "M3 spectrum"
@@ -204,38 +179,22 @@ def dem_imshow(
     ymax=None,
     band="slope",
     ax=None,
-    title=None,
+    title="",
     cmap="viridis",
     **kwargs,
 ):
     """
     Use imshow to display a stacked DEM image (slope, azimuth, elevation).
 
-    Parameters
-    ----------
-    dem : ndarray
-        A 3D stacked DEM (slope, azimuth, elevation).
-    xmin : int
-        Minimum x index to plot.
-    xmax : int
-        Maximum x index to plot.
-    ymin : int
-        Minimum y index to plot.
-    ymax : int
-        Maximum y index to plot.
-    band : str or tuple
-        The band to display. Valid values are 'slope', 'azim', 'elev', or a
-        tuple of (0, 1, 2) respectively.
-    ax : matplotlib.axes.Axes, optional
-        Axes to plot on. If not provided, a new axes will be generated.
-    title : str, optional
-        Plot title. Default is None.
-    cmap : str, optional
-        Colormap. Default is "gray".
-
-    Returns
-    -------
-    None
+    Parameters:
+        dem (ndarray): A 3D stacked DEM (slope, azimuth, elevation).
+        xmin, xmax, ymin, ymax (int): The x and y index ranges to plot.
+        band (str or tuple): The band to display. Valid values are 'slope', 
+            'azim', 'elev', or a tuple of (0, 1, 2) respectively.
+        ax (matplotlib.axes.Axes, optional): Axes to plot on. If not provided, 
+            a new Axes object will be generated.
+        title (str, optional): Plot title (default: '')
+        cmap (str, optional): Colormap (default: "gray").
     """
     zmap = {"slope": 0, "azim": 1, "elev": 2, 0: "slope", 1: "azim", 2: "elev"}
     if len(dem.shape) > 2 and dem.shape[2] > 1:
@@ -245,10 +204,10 @@ def dem_imshow(
             zind = band
         else:
             raise ValueError(f"Unknown band {band} specified.")
+        if title is None:
+            title = f"DEM {zmap[zind]}"
     else:
         zind = None
-    if title is None:
-        title = f"DEM {zmap[zind]}"
     if ax is None:
         _, ax = plt.subplots()
     p = ax.imshow(dem[xmin:xmax, ymin:ymax, zind].T, cmap=cmap, **kwargs)
