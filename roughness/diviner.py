@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-import roughness.config as cfg
 import roughness.helpers as rh
 import roughness.emission as re
+from roughness.config import DATA_DIR_DIVINER
 
 
 DIV_C = ("c3", "c4", "c5", "c6", "c7", "c8", "c9")
@@ -19,8 +19,8 @@ ITERS = np.array([5, 5, 6, 10, 16, 24, 56])
 FILT_SCALE = np.array(
     [1.0005, 1.0003, 1.0010, 1.0018, 1.00600, 0.71939, 0.79358]
 )
-FDIV_T2R = "/home/ctaiudovicic/projects/roughness/tmp/div_t2r.txt"
-FDIV_FILT = "/nfs/data/josh/home/projects/diviner/diviner_filter_functions.hdf"
+FDIV_T2R = DATA_DIR_DIVINER / "div_t2r.txt"
+FDIV_FILT = DATA_DIR_DIVINER / "diviner_filter_functions.hdf"
 
 
 def lev4hourly2xr(
@@ -41,14 +41,13 @@ def lev4hourly2xr(
     If savefile: save result to netCDF (.nc) file for quick I/O into xarray,
     e.g. with xr.open_dataarray(savefile).
 
-    Parameters
-    ----------
-    fgrds ()
-    tres (num): time resolution
-    interp_method (str): interpolation method (see xarray.interpolate_na)
-    interp_wrap (bool): interpolate around time axis (wrap around 0/24h)
-    ext (list): extent of ROI
-    savefile (str): Path to save result to netCDF (.nc) file
+    Parameters:
+        fgrds (list of str): list of paths to .grd files (e.g. from glob)
+        tres (num): time resolution
+        interp_method (str): interpolation method (see xarray.interpolate_na)
+        interp_wrap (bool): interpolate around time axis (wrap around 0/24h)
+        ext (list): extent of ROI
+        savefile (str): Path to save result to netCDF (.nc) file
     """
     if not tres:
         # Assume 8 bands (ch3 - ch9 + tbol), diurnal [24 h], infer tres [hr]
@@ -105,6 +104,10 @@ def lev4hourly2xr(
 def fit_poly_daytime(Tday, deg=2):
     """
     Return polynomial fit of order deg to daytime temperature data.
+
+    Parameters:
+        Tday (np.array): daytime temperature data
+        deg (int): order of polynomial fit
     """
     tloc = np.linspace(6, 18, len(Tday) + 1)[:-1]
     nan = np.isnan(Tday)
@@ -117,6 +120,10 @@ def fit_poly_daytime(Tday, deg=2):
 def smooth_daytime(T_xarr, savefile=None):
     """
     Return smoothed daytime T from 6 AM to 6 PM with 2nd order polyfit.
+
+    Parameters:
+        T_xarr (xr.DataArray): Diviner lev4 hourly temperature data
+        savefile (str): Path to save result to netCDF (.nc) file
     """
     tres = T_xarr.tloc[1].values - T_xarr.tloc[0].values
     Tday = T_xarr.sel(tloc=np.arange(6, 18, tres))
@@ -135,6 +142,10 @@ def smooth_daytime(T_xarr, savefile=None):
 def add_wls_diviner(xarr, bands=("t3", "t4", "t5", "t6", "t7", "t8", "t9")):
     """
     Return xarr with wavelength coordinate.
+
+    Parameters:
+        xarr (xr.DataArray): Diviner lev4 hourly temperature data
+        bands (tuple): bands to include in output
     """
     wl = get_diviner_wls().values
     out = xarr.sel(band=slice("t3", "t9")).assign_coords(
@@ -147,6 +158,9 @@ def add_wls_diviner(xarr, bands=("t3", "t4", "t5", "t6", "t7", "t8", "t9")):
 def get_diviner_wls(bres=1):
     """
     Return diviner c3-c9 wavelength arr with band_res values in each bandpass.
+
+    Parameters:
+        bres (int): number of wavelength values in each bandpass
     """
     if bres == 1:
         wls = np.mean((DIV_WL_MIN, DIV_WL_MAX), axis=0)
@@ -161,6 +175,10 @@ def get_diviner_wls(bres=1):
 def div_integrated_rad(emission, units="W/m^2/sr/um"):
     """
     Return integrated radiance of diviner bands.
+
+    Parameters:
+        emission (xr.DataArray): Diviner radiated emission
+        units (str): units of output
     """
     out = []
     for dwlmin, dwlmax in zip(DIV_WL_MIN, DIV_WL_MAX):
@@ -179,10 +197,19 @@ def load_div_lev4(
     smoothday=False,
     invert_y=False,
     load_cached=True,
-    divdir=cfg.DATA_DIR_DIVINER,
+    divdir=DATA_DIR_DIVINER / "lev4",
 ):
     """
     Return Diviner lev4 data as xarray.
+
+    Parameters:
+        roi (str): region of interest
+        ext (list): extent of ROI
+        savefile (str): Path to save result to netCDF (.nc) file
+        smoothday (bool): smooth daytime temperatures with 2nd order polyfit
+        invert_y (bool): invert y axis (sometimes Diviner data inverted)
+        load_cached (bool): load cached data if available
+        divdir (str): path to Diviner data directory
     """
     roi_str = roi.replace("'", "_").lower()
     savepath = Path(divdir) / roi_str / savefile
@@ -210,7 +237,15 @@ def load_div_lev4(
 
 def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
     """
-    Return tbol from Diviner C3-C9 brightness temperatures.
+    Return bolometric temperature from Diviner C3-C9 brightness temperatures 
+    (s.o.m, Paige et al., 2010, in Science).
+
+    Parameters:
+        divbt (np.array): Diviner brightness temperatures
+        wl1 (np.array): lower wavelength bound of each band
+        wl2 (np.array): upper wavelength bound of each band
+        tmin (np.array): minimum temperature of each band
+        iters (np.array): number of iterations for each band
     """
 
     def f(wl, bt, n_iter):
@@ -230,6 +265,12 @@ def div_tbol(divbt, wl1=DIV_WL1, wl2=DIV_WL2, tmin=DIV_TMIN, iters=ITERS):
         Return fraction of Planck radiance between wl1 and wl2 at bt.
 
         Translated from JB, via DAP via Houghton 'Physics of Atmospheres'
+
+        Parameters:
+            bt (float): brightness temperature
+            wl1 (float): lower wavelength bound
+            wl2 (float): upper wavelength bound
+            n_iter (int): number of iterations
         """
         return 1.53989733e-1 * (f(wl2, bt, n_iter) - f(wl1, bt, n_iter))
 
@@ -261,6 +302,12 @@ def load_div_filters(
 ):
     """
     Return Diviner filter functions
+
+    Parameters:
+        fdiv_filt (str): path to Diviner filter functions
+        scale (bool): scale filter functions by FILT_SCALE
+        wlunits (bool): convert wavenumber to wavelength
+        bands (tuple): bands to include in output
     """
     hdf = xr.load_dataset(fdiv_filt)
     wn = hdf.xaxis.values.squeeze()
@@ -284,6 +331,9 @@ def load_div_filters(
 def load_div_t2r(fdiv_t2r=FDIV_T2R):
     """
     Return Diviner temperature to radiance lookup table.
+
+    Parameters:
+        fdiv_t2r (str): path to Diviner t2r lookup table
     """
     return pd.read_csv(fdiv_t2r, index_col=0, header=0, delim_whitespace=True)
 
@@ -291,6 +341,10 @@ def load_div_t2r(fdiv_t2r=FDIV_T2R):
 def divfilt_rad(wnrad, div_filt=None):
     """
     Return radiance of Diviner bands (convolve rad with Diviner filter funcs).
+
+    Parameters:
+        wnrad (xr.DataArray): Diviner radiance in wavenumber space
+        div_filt (xr.DataArray): Diviner filter functions
     """
     if div_filt is None:
         div_filt = load_div_filters()
@@ -301,6 +355,10 @@ def divfilt_rad(wnrad, div_filt=None):
 def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
     """
     Return brightness temperatures from Diviner radiance (e.g. from div_filt).
+
+    Parameters:
+        divrad (xr.DataArray): Diviner radiance
+        fdiv_t2r (str): path to Diviner t2r lookup table
     """
     t2r = load_div_t2r(fdiv_t2r)  # cached lookup
     rad = divrad.values
@@ -323,7 +381,14 @@ def divrad2bt(divrad, fdiv_t2r=FDIV_T2R):
 
 
 def emission2tbol_xr(emission, wls=None, div_filt=None):
-    """Return tbol from input emission array at wls."""
+    """
+    Return tbol from input emission array at wls.
+    
+    Parameters:
+        emission (xr.DataArray): Diviner radiated emission
+        wls (xr.DataArray): wavelengths to integrate over
+        div_filt (xr.DataArray): Diviner filter functions
+    """
     if wls is None:
         wls = emission.wavelength
     elif not isinstance(wls, xr.DataArray):

@@ -143,6 +143,9 @@ tmp/
 scratch/
 
 # Data folder except !items
-/data/*
+/data/**
+!data/**/
 !data/__init__.py
 !data/m3/m3_wls.json
+!data/diviner/div_t2r.txt
+!data/diviner/diviner_filter_functions.hdf
