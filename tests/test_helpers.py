@@ -44,3 +44,17 @@ def test_facet_grids():
         np.array([[90.0, 90.0, 90.0], [270.0, 270.0, 270.0]]),
     )
     np.testing.assert_almost_equal(actual, expected)
+
+def test_get_inc_az_from_subspacecraft():
+    """Test get_inc_az_from_subspacecraft"""
+    actual = rh.get_inc_az_from_subspacecraft(0,0,45,45)
+    expected = (60,35.26)
+    np.testing.assert_array_almost_equal(actual, expected, 2)
+
+    actual = rh.get_inc_az_from_subspacecraft(0,0,-45,-45)
+    expected = (60,215.26)
+    np.testing.assert_array_almost_equal(actual, expected, 2)
+
+    actual = rh.get_inc_az_from_subspacecraft(-10,0,-55,45)
+    expected = (60,324.73)
+    np.testing.assert_array_almost_equal(actual, expected, 2)

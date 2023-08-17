@@ -575,17 +575,19 @@ def tloc_to_inc(tloc, lat=0, az=False):
     return inc
 
 
-def get_inc_az_from_subsolar(lon, lat, sslon, sslat):
+def get_inc_az_from_subspacecraft(sslon, sslat, lon, lat):
     """
-    Return inc and az angle at (lat, lon) given subsolar point (sslat, sslon).
+    Return inc and az angle at (lat, lon) given subspacecraft point
+    (sslat, sslon). Return azimuth in degrees Clockwise from North (0 - 360).
 
     From calculator at https://the-moon.us/wiki/Sun_Angle
-
+    
     Parameters:
-        lon (float): Longitude of point of interest [deg]
-        lat (float): Latitude of point of interest [deg]
         sslon (float): Subsolar longitude [deg]
         sslat (float): Subsolar latitude [deg]
+        lon (float): Longitude of point of interest [deg]
+        lat (float): Latitude of point of interest [deg]
+        
 
     Returns:
         inc, az (float): Solar incidence and azimuth angles [deg]
@@ -602,11 +604,11 @@ def get_inc_az_from_subsolar(lon, lat, sslon, sslat):
         + np.cos(sslat) * np.cos(lat) * np.cos(dlon)
     )
     az = np.arctan2(
-        np.cos(sslat) * np.sin(-dlon),
-        np.cos(lat) * np.sin(sslat)
-        - np.sin(lat) * np.cos(sslat) * np.cos(-dlon),
+        np.cos(lat) * np.sin(dlon),
+        np.cos(sslat) * np.sin(lat)
+        - np.sin(sslat) * np.cos(lat) * np.cos(dlon),
     )
-    return np.rad2deg(inc), np.rad2deg(az)
+    return np.rad2deg(inc), np.rad2deg(az) % 360
 
 
 # Linear algebra
