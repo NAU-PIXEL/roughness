@@ -3,8 +3,8 @@
 The roughness python model requires 3 components to run:
 
 - The package itself (see installation instructions)
-- A raytrace shadowing lookup table (see [make_los_table](make_los_table.md))
-- A temperature lookup table (see [make_temp_table](make_temp_table.md))
+- A raytrace shadowing lookup table (see [make_los_table](reference/make_los_table.md))
+- A temperature lookup table (see [Temperature Tables](../temperature_tables/))
 
 Basic versions of the generaic shadowing table and lunar temperature lookup table are provided on Zenodo (coming soon), but custom versions of each can be generated using the tools in the roughness package.
 
@@ -53,4 +53,4 @@ emission = rtm.emission(geometry, wavelengths, rms, tparams)  # returns xarray
 emission.plot() # Plot emitted radiance vs. wavelength
 ```
 
-For more examples, see the [examples](examples.md) page.
+See [Rough Emission](../rough_emission/) for a more detailed example.

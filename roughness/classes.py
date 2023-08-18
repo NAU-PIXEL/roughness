@@ -4,6 +4,7 @@ used by the roughness thermal model.
 """
 
 from functools import cached_property
+from pathlib import Path
 import xarray as xr
 from roughness.config import FLOOKUP, TLOOKUP
 import roughness.emission as re
@@ -13,6 +14,11 @@ class RoughnessThermalModel:
     """Initialize a roughness thermophysical model object."""
 
     def __init__(self, shadow_lookup=FLOOKUP, temperature_lookup=TLOOKUP):
+        if shadow_lookup == FLOOKUP and not Path(shadow_lookup).exists():
+            raise FileNotFoundError(
+                "Default shadow lookup table not found. Please run \
+                `roughness -d` in the terminal to download it."
+            )
         self.shadow_lookup = shadow_lookup
         self.temperature_lookup = temperature_lookup
         self.temperature_ds = xr.open_dataset(temperature_lookup)
@@ -21,6 +27,10 @@ class RoughnessThermalModel:
                 f"Temperature lookup {self.temperature_lookup} \
                                must have dimensions az, theta"
             )
+        
+    def __repr__(self):
+        return (f"RoughnessThermalModel(shadow_lookup='{self.shadow_lookup}'" +
+                f", temperature_lookup='{self.temperature_lookup}')")
 
     def emission(
         self, sun_theta, sun_az, sc_theta, sc_az, wls, rms, tparams, **kwargs
@@ -29,13 +39,13 @@ class RoughnessThermalModel:
         Return rough surface emission at the given viewing geometry.
 
         Parameters:
-            sun_theta, sun_az, sc_theta, sc_az: Viewing angles [degrees]
+            sun_theta,sun_az,sc_theta,sc_az (num): Viewing angles [degrees]
                 (incidence, solar_azimuth, emergence, emergence_azimuth)
             wls (arr): Wavelengths [microns]
             rms (arr, optional): RMS roughness [degrees]. Default is 15.
             rerad (bool, optional): If True, include re-radiation from adjacent
                 facets. Default is True.
-            tparams (dict, optional): Dictionary of temperature lookup parameters.
+            tparams (dict, optional): Dictionary of temp erature lookup parameters.
                 Default is None.
             **kwargs
 

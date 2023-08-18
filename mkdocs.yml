@@ -36,6 +36,10 @@ plugins:
           paths: [roughness]
   - literate-nav:
       nav_file: SUMMARY.md
+  - mkdocs-jupyter:
+      include_source: true
+      execute: true
+      allow_errors: false
 
 # Footer
 extra:
@@ -49,9 +53,13 @@ nav:
   - Home: index.md
   - 'User Guide':
     - 'Getting Started': 'getting_started.md'
-    - 'Examples': examples.md
+    - 'Shadow Tables': 'shadow_tables.ipynb'
+    - 'Rough emission': 'rough_emission.ipynb'
   - About: about.md
   - Code Reference: reference/
+
+not_in_nav: |
+  gen_api_pages.py
 
 # Enable math (req. python-markdown-math)
 extra_javascript:
