@@ -13,7 +13,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
@@ -22,13 +22,27 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
+      # Install dependencies if not cached
       - name: Load cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .venv
           key: venv-ubuntu-latest-docs-${{ hashFiles('**/poetry.lock') }}
-      - name: Install dependencies
+      - if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'  
+        name: Install dependencies
         run: poetry install --no-interaction --with docs
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'      
+      
+      # Download default datasets if not cached
+      - name: Get data path
+        run: export DATA_PATH=$(poetry run python -c "from roughness import config as cfg; print(cfg.DATA_DIR)")
+      - name: Load cached datasets
+        id: cached-datasets
+        uses: actions/cache@v3
+        with:
+          path: ${DATA_PATH}
+          key: datasets-ubuntu-latest-docs-${{ hashFiles('**/*.nc') }}
+      - if: steps.cached-datasets.outputs.cache-hit != 'true'
+        name: Download datasets
+        run: poetry run roughness -d
       - run: poetry run mkdocs gh-deploy --force
