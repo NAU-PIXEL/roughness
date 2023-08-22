@@ -1,0 +1,2775 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the roughness python package.">
+      
+      
+        <meta name="author" content="Christian Tai Udovicic">
+      
+      
+        <link rel="canonical" href="https://nau-pixel.github.io/roughness/reference/diviner/">
+      
+      
+        <link rel="prev" href="../classes/">
+      
+      
+        <link rel="next" href="../emission/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.1">
+    
+    
+      
+        <title>diviner - Roughness</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.0e669242.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#diviner" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Roughness" class="md-header__button md-logo" aria-label="Roughness" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Roughness
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              diviner
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/NAU-PIXEL/roughness" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    NAU-PIXEL/roughness
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting_started/" class="md-tabs__link">
+          
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../about/" class="md-tabs__link">
+        
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../classes/" class="md-tabs__link">
+          
+  
+  Code Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Roughness" class="md-nav__button md-logo" aria-label="Roughness" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    Roughness
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/NAU-PIXEL/roughness" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    NAU-PIXEL/roughness
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    User Guide
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting_started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shadow_tables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Shadow table
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rough_emission/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Rough Emission
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    About
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Code Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Code Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../classes/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    classes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    diviner
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    diviner
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#diviner" class="md-nav__link">
+    diviner
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.add_wls_diviner" class="md-nav__link">
+    add_wls_diviner()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.div_integrated_rad" class="md-nav__link">
+    div_integrated_rad()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.div_tbol" class="md-nav__link">
+    div_tbol()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.divfilt_rad" class="md-nav__link">
+    divfilt_rad()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.divrad2bt" class="md-nav__link">
+    divrad2bt()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.emission2tbol_xr" class="md-nav__link">
+    emission2tbol_xr()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.fit_poly_daytime" class="md-nav__link">
+    fit_poly_daytime()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.get_diviner_wls" class="md-nav__link">
+    get_diviner_wls()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.lev4hourly2xr" class="md-nav__link">
+    lev4hourly2xr()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_filters" class="md-nav__link">
+    load_div_filters()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_lev4" class="md-nav__link">
+    load_div_lev4()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_t2r" class="md-nav__link">
+    load_div_t2r()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.smooth_daytime" class="md-nav__link">
+    smooth_daytime()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../emission/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    emission
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../helpers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    helpers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../m3_correction/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    m3_correction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../make_los_table/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    make_los_table
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plotting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    plotting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roughness/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    roughness
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#diviner" class="md-nav__link">
+    diviner
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.add_wls_diviner" class="md-nav__link">
+    add_wls_diviner()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.div_integrated_rad" class="md-nav__link">
+    div_integrated_rad()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.div_tbol" class="md-nav__link">
+    div_tbol()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.divfilt_rad" class="md-nav__link">
+    divfilt_rad()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.divrad2bt" class="md-nav__link">
+    divrad2bt()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.emission2tbol_xr" class="md-nav__link">
+    emission2tbol_xr()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.fit_poly_daytime" class="md-nav__link">
+    fit_poly_daytime()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.get_diviner_wls" class="md-nav__link">
+    get_diviner_wls()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.lev4hourly2xr" class="md-nav__link">
+    lev4hourly2xr()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_filters" class="md-nav__link">
+    load_div_filters()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_lev4" class="md-nav__link">
+    load_div_lev4()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.load_div_t2r" class="md-nav__link">
+    load_div_t2r()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diviner.smooth_daytime" class="md-nav__link">
+    smooth_daytime()
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>diviner</h1>
+
+<div class="doc doc-object doc-module">
+
+
+<a id="diviner"></a>
+  <div class="doc doc-contents first">
+  
+      <p>Helpers for Diviner data.</p>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.add_wls_diviner" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">add_wls_diviner</span><span class="p">(</span><span class="n">xarr</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;t3&#39;</span><span class="p">,</span> <span class="s1">&#39;t4&#39;</span><span class="p">,</span> <span class="s1">&#39;t5&#39;</span><span class="p">,</span> <span class="s1">&#39;t6&#39;</span><span class="p">,</span> <span class="s1">&#39;t7&#39;</span><span class="p">,</span> <span class="s1">&#39;t8&#39;</span><span class="p">,</span> <span class="s1">&#39;t9&#39;</span><span class="p">))</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return xarr with wavelength coordinate.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>xarr</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner lev4 hourly temperature data</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>bands</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>bands to include in output</p>
+            </div>
+          </td>
+          <td>
+                <code>(&#39;t3&#39;, &#39;t4&#39;, &#39;t5&#39;, &#39;t6&#39;, &#39;t7&#39;, &#39;t8&#39;, &#39;t9&#39;)</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add_wls_diviner</span><span class="p">(</span><span class="n">xarr</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;t3&quot;</span><span class="p">,</span> <span class="s2">&quot;t4&quot;</span><span class="p">,</span> <span class="s2">&quot;t5&quot;</span><span class="p">,</span> <span class="s2">&quot;t6&quot;</span><span class="p">,</span> <span class="s2">&quot;t7&quot;</span><span class="p">,</span> <span class="s2">&quot;t8&quot;</span><span class="p">,</span> <span class="s2">&quot;t9&quot;</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return xarr with wavelength coordinate.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        xarr (xr.DataArray): Diviner lev4 hourly temperature data</span>
+<span class="sd">        bands (tuple): bands to include in output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">wl</span> <span class="o">=</span> <span class="n">get_diviner_wls</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xarr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="s2">&quot;t3&quot;</span><span class="p">,</span> <span class="s2">&quot;t9&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+        <span class="n">wavelength</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;band&quot;</span><span class="p">,</span> <span class="n">wl</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="n">bands</span><span class="p">)</span>  <span class="c1"># Drops unneeded bands</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.div_integrated_rad" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">div_integrated_rad</span><span class="p">(</span><span class="n">emission</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;W/m^2/sr/um&#39;</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return integrated radiance of diviner bands.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>emission</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner radiated emission</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>units</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>units of output</p>
+            </div>
+          </td>
+          <td>
+                <code>&#39;W/m^2/sr/um&#39;</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">div_integrated_rad</span><span class="p">(</span><span class="n">emission</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">&quot;W/m^2/sr/um&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return integrated radiance of diviner bands.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        emission (xr.DataArray): Diviner radiated emission</span>
+<span class="sd">        units (str): units of output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dwlmin</span><span class="p">,</span> <span class="n">dwlmax</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">DIV_WL_MIN</span><span class="p">,</span> <span class="n">DIV_WL_MAX</span><span class="p">):</span>
+        <span class="n">cemiss</span> <span class="o">=</span> <span class="n">emission</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">wavelength</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="n">dwlmin</span><span class="p">,</span> <span class="n">dwlmax</span><span class="p">))</span>
+        <span class="n">wlmin</span> <span class="o">=</span> <span class="n">cemiss</span><span class="o">.</span><span class="n">wavelength</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">wlmax</span> <span class="o">=</span> <span class="n">cemiss</span><span class="o">.</span><span class="n">wavelength</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cemiss</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="s2">&quot;wavelength&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="p">(</span><span class="n">wlmax</span> <span class="o">-</span> <span class="n">wlmin</span><span class="p">))</span>
+    <span class="n">wls</span> <span class="o">=</span> <span class="n">get_diviner_wls</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+    <span class="k">return</span> <span class="n">rh</span><span class="o">.</span><span class="n">spec2xr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">wls</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">units</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.div_tbol" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">div_tbol</span><span class="p">(</span><span class="n">divbt</span><span class="p">,</span> <span class="n">wl1</span><span class="o">=</span><span class="n">DIV_WL1</span><span class="p">,</span> <span class="n">wl2</span><span class="o">=</span><span class="n">DIV_WL2</span><span class="p">,</span> <span class="n">tmin</span><span class="o">=</span><span class="n">DIV_TMIN</span><span class="p">,</span> <span class="n">iters</span><span class="o">=</span><span class="n">ITERS</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return bolometric temperature from Diviner C3-C9 brightness temperatures 
+(s.o.m, Paige et al., 2010, in Science).</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>divbt</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner brightness temperatures</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>wl1</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>lower wavelength bound of each band</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.DIV_WL1">DIV_WL1</span></code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>wl2</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>upper wavelength bound of each band</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.DIV_WL2">DIV_WL2</span></code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tmin</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>minimum temperature of each band</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.DIV_TMIN">DIV_TMIN</span></code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>iters</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>number of iterations for each band</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.ITERS">ITERS</span></code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">div_tbol</span><span class="p">(</span><span class="n">divbt</span><span class="p">,</span> <span class="n">wl1</span><span class="o">=</span><span class="n">DIV_WL1</span><span class="p">,</span> <span class="n">wl2</span><span class="o">=</span><span class="n">DIV_WL2</span><span class="p">,</span> <span class="n">tmin</span><span class="o">=</span><span class="n">DIV_TMIN</span><span class="p">,</span> <span class="n">iters</span><span class="o">=</span><span class="n">ITERS</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return bolometric temperature from Diviner C3-C9 brightness temperatures </span>
+<span class="sd">    (s.o.m, Paige et al., 2010, in Science).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        divbt (np.array): Diviner brightness temperatures</span>
+<span class="sd">        wl1 (np.array): lower wavelength bound of each band</span>
+<span class="sd">        wl2 (np.array): upper wavelength bound of each band</span>
+<span class="sd">        tmin (np.array): minimum temperature of each band</span>
+<span class="sd">        iters (np.array): number of iterations for each band</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">wl</span><span class="p">,</span> <span class="n">bt</span><span class="p">,</span> <span class="n">n_iter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;CFST iteration helper. n_iter small, so loop is faster&quot;&quot;&quot;</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="mf">1.43883e4</span> <span class="o">/</span> <span class="p">(</span><span class="n">wl</span> <span class="o">*</span> <span class="n">bt</span><span class="p">)</span>
+        <span class="n">tot</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_iter</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">tot</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="n">w</span><span class="o">**-</span><span class="mi">4</span>
+                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">e</span> <span class="o">**</span> <span class="o">-</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span>
+                <span class="o">*</span> <span class="p">(((</span><span class="n">w</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="mi">6</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="mi">6</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">tot</span>
+
+    <span class="k">def</span> <span class="nf">cfst</span><span class="p">(</span><span class="n">bt</span><span class="p">,</span> <span class="n">wl1</span><span class="p">,</span> <span class="n">wl2</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return fraction of Planck radiance between wl1 and wl2 at bt.</span>
+
+<span class="sd">        Translated from JB, via DAP via Houghton &#39;Physics of Atmospheres&#39;</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            bt (float): brightness temperature</span>
+<span class="sd">            wl1 (float): lower wavelength bound</span>
+<span class="sd">            wl2 (float): upper wavelength bound</span>
+<span class="sd">            n_iter (int): number of iterations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mf">1.53989733e-1</span> <span class="o">*</span> <span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">wl2</span><span class="p">,</span> <span class="n">bt</span><span class="p">,</span> <span class="n">n_iter</span><span class="p">)</span> <span class="o">-</span> <span class="n">f</span><span class="p">(</span><span class="n">wl1</span><span class="p">,</span> <span class="n">bt</span><span class="p">,</span> <span class="n">n_iter</span><span class="p">))</span>
+
+    <span class="n">vcfst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">cfst</span><span class="p">,</span> <span class="n">otypes</span><span class="o">=</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span>
+
+    <span class="c1"># Backfill values below tmin from the next band over (C9-&gt;C3)</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">divbt</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">divbt</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">divbt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">tmin</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">temp</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="c1"># Convenient to use pandas but overkill, takes longer</span>
+    <span class="c1"># temp = (</span>
+    <span class="c1">#     pd.Series(np.where(divbt &gt;= tmin, divbt, np.nan))</span>
+    <span class="c1">#     .fillna(method=&quot;bfill&quot;)</span>
+    <span class="c1">#     .values</span>
+    <span class="c1"># )</span>
+
+    <span class="c1"># Convert to radiance, weight by cfst, sum and convert back to temperature</span>
+    <span class="n">rad</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">get_rad_sb</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span> <span class="o">*</span> <span class="n">vcfst</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">wl1</span><span class="p">,</span> <span class="n">wl2</span><span class="p">,</span> <span class="n">iters</span><span class="p">)</span>
+    <span class="n">tbol</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">get_temp_sb</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">rad</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">tbol</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.divfilt_rad" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">divfilt_rad</span><span class="p">(</span><span class="n">wnrad</span><span class="p">,</span> <span class="n">div_filt</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return radiance of Diviner bands (convolve rad with Diviner filter funcs).</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>wnrad</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner radiance in wavenumber space</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>div_filt</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner filter functions</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">divfilt_rad</span><span class="p">(</span><span class="n">wnrad</span><span class="p">,</span> <span class="n">div_filt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return radiance of Diviner bands (convolve rad with Diviner filter funcs).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        wnrad (xr.DataArray): Diviner radiance in wavenumber space</span>
+<span class="sd">        div_filt (xr.DataArray): Diviner filter functions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">div_filt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">div_filt</span> <span class="o">=</span> <span class="n">load_div_filters</span><span class="p">()</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">div_filt</span> <span class="o">*</span> <span class="n">wnrad</span>  <span class="c1"># Must both have wavelength coord</span>
+    <span class="k">return</span> <span class="n">filtered</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="s2">&quot;wavelength&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.divrad2bt" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">divrad2bt</span><span class="p">(</span><span class="n">divrad</span><span class="p">,</span> <span class="n">fdiv_t2r</span><span class="o">=</span><span class="n">FDIV_T2R</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return brightness temperatures from Diviner radiance (e.g. from div_filt).</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>divrad</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner radiance</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>fdiv_t2r</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>path to Diviner t2r lookup table</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.FDIV_T2R">FDIV_T2R</span></code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">divrad2bt</span><span class="p">(</span><span class="n">divrad</span><span class="p">,</span> <span class="n">fdiv_t2r</span><span class="o">=</span><span class="n">FDIV_T2R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return brightness temperatures from Diviner radiance (e.g. from div_filt).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        divrad (xr.DataArray): Diviner radiance</span>
+<span class="sd">        fdiv_t2r (str): path to Diviner t2r lookup table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">t2r</span> <span class="o">=</span> <span class="n">load_div_t2r</span><span class="p">(</span><span class="n">fdiv_t2r</span><span class="p">)</span>  <span class="c1"># cached lookup</span>
+    <span class="n">rad</span> <span class="o">=</span> <span class="n">divrad</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">rad</span> <span class="o">&lt;</span> <span class="n">t2r</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">rad</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dbt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">divrad</span><span class="o">.</span><span class="n">band</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">divrad</span><span class="o">.</span><span class="n">band</span><span class="o">.</span><span class="n">values</span><span class="p">):</span>
+        <span class="c1"># Linearly interpolate between the two closest BT values</span>
+        <span class="n">bt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">t2r</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">rad</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">bt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">dbt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="p">(</span><span class="n">rad</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">t2r</span><span class="p">[</span><span class="n">c</span><span class="p">][</span><span class="n">bt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">t2r</span><span class="p">[</span><span class="n">c</span><span class="p">][</span><span class="n">bt</span><span class="p">]</span> <span class="o">-</span> <span class="n">t2r</span><span class="p">[</span><span class="n">c</span><span class="p">][</span><span class="n">bt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="n">dbt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">bt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">f</span><span class="p">)</span> <span class="o">+</span> <span class="n">bt</span> <span class="o">*</span> <span class="n">f</span>
+
+        <span class="c1"># np.interp is equivalent but slower</span>
+        <span class="c1"># numpy interp(desired x (rad), actual x (rad), actual y (temp))</span>
+        <span class="c1"># dbt[i] = np.interp(rad[i], t2r[c], t2r.index)</span>
+    <span class="k">return</span> <span class="n">dbt</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.emission2tbol_xr" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">emission2tbol_xr</span><span class="p">(</span><span class="n">emission</span><span class="p">,</span> <span class="n">wls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">div_filt</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return tbol from input emission array at wls.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>emission</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner radiated emission</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>wls</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>wavelengths to integrate over</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>div_filt</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner filter functions</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">emission2tbol_xr</span><span class="p">(</span><span class="n">emission</span><span class="p">,</span> <span class="n">wls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">div_filt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return tbol from input emission array at wls.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        emission (xr.DataArray): Diviner radiated emission</span>
+<span class="sd">        wls (xr.DataArray): wavelengths to integrate over</span>
+<span class="sd">        div_filt (xr.DataArray): Diviner filter functions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">wls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="n">emission</span><span class="o">.</span><span class="n">wavelength</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">wls</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">):</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">wl2xr</span><span class="p">(</span><span class="n">wls</span><span class="p">)</span>
+    <span class="n">wnrad</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">wlrad2wnrad</span><span class="p">(</span><span class="n">wls</span><span class="p">,</span> <span class="n">emission</span><span class="p">)</span>
+    <span class="n">divrad</span> <span class="o">=</span> <span class="n">divfilt_rad</span><span class="p">(</span><span class="n">wnrad</span><span class="p">,</span> <span class="n">div_filt</span><span class="p">)</span>
+    <span class="n">tbol</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">emission</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">wavelength</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;wavelength&quot;</span><span class="p">))</span>
+    <span class="n">dim0</span><span class="p">,</span> <span class="n">dim1</span> <span class="o">=</span> <span class="n">tbol</span><span class="o">.</span><span class="n">dims</span>  <span class="c1"># Generic so that x,y or lat,lon work in any order</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tbol</span><span class="p">[</span><span class="n">dim0</span><span class="p">])):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tbol</span><span class="p">[</span><span class="n">dim1</span><span class="p">])):</span>
+            <span class="n">div_bts</span> <span class="o">=</span> <span class="n">divrad2bt</span><span class="p">(</span><span class="n">divrad</span><span class="o">.</span><span class="n">isel</span><span class="p">({</span><span class="n">dim0</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="n">dim1</span><span class="p">:</span> <span class="n">j</span><span class="p">}))</span>
+            <span class="n">tbol</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">div_tbol</span><span class="p">(</span><span class="n">div_bts</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tbol</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.fit_poly_daytime" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">fit_poly_daytime</span><span class="p">(</span><span class="n">Tday</span><span class="p">,</span> <span class="n">deg</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return polynomial fit of order deg to daytime temperature data.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>Tday</code></td>
+          <td>
+                <code><span title="numpy.array">array</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>daytime temperature data</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>deg</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>order of polynomial fit</p>
+            </div>
+          </td>
+          <td>
+                <code>2</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">fit_poly_daytime</span><span class="p">(</span><span class="n">Tday</span><span class="p">,</span> <span class="n">deg</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return polynomial fit of order deg to daytime temperature data.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        Tday (np.array): daytime temperature data</span>
+<span class="sd">        deg (int): order of polynomial fit</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tloc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Tday</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">Tday</span><span class="p">)</span>
+    <span class="n">pfit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">tloc</span><span class="p">[</span><span class="o">~</span><span class="n">nan</span><span class="p">],</span> <span class="n">Tday</span><span class="p">[</span><span class="o">~</span><span class="n">nan</span><span class="p">],</span> <span class="n">deg</span><span class="p">)</span>
+    <span class="n">fit_func</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">poly1d</span><span class="p">(</span><span class="n">pfit</span><span class="p">)</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">fit_func</span><span class="p">(</span><span class="n">tloc</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fit</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.get_diviner_wls" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_diviner_wls</span><span class="p">(</span><span class="n">bres</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return diviner c3-c9 wavelength arr with band_res values in each bandpass.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>bres</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>number of wavelength values in each bandpass</p>
+            </div>
+          </td>
+          <td>
+                <code>1</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_diviner_wls</span><span class="p">(</span><span class="n">bres</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return diviner c3-c9 wavelength arr with band_res values in each bandpass.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        bres (int): number of wavelength values in each bandpass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">bres</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">DIV_WL_MIN</span><span class="p">,</span> <span class="n">DIV_WL_MAX</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">wzip</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">DIV_WL_MIN</span><span class="p">,</span> <span class="n">DIV_WL_MAX</span><span class="p">)</span>
+        <span class="n">wls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">w1</span><span class="p">,</span> <span class="n">w2</span><span class="p">,</span> <span class="n">bres</span><span class="p">)</span> <span class="k">for</span> <span class="n">w1</span><span class="p">,</span> <span class="n">w2</span> <span class="ow">in</span> <span class="n">wzip</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">rh</span><span class="o">.</span><span class="n">wl2xr</span><span class="p">(</span><span class="n">wls</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.lev4hourly2xr" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">lev4hourly2xr</span><span class="p">(</span><span class="n">fgrds</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">savefile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">interp_method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">interp_wrap</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return xarray of Diviner lev4 hourly grd tiles with time resolution tres.</p>
+<p>If interp_method: Interpolate missing values along tloc axis with method
+specified (e.g. 'nearest', 'linear', 'cubic', see xr.interpolate_na methods).
+Linear seems to produce fewest sharp artifacts.</p>
+<p>If savefile: save result to netCDF (.nc) file for quick I/O into xarray,
+e.g. with xr.open_dataarray(savefile).</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>fgrds</code></td>
+          <td>
+                <code>list of str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>list of paths to .grd files (e.g. from glob)</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>tres</code></td>
+          <td>
+                <code>num</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>time resolution</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>interp_method</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>interpolation method (see xarray.interpolate_na)</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>interp_wrap</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>interpolate around time axis (wrap around 0/24h)</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>ext</code></td>
+          <td>
+                <code>list</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>extent of ROI</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>savefile</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Path to save result to netCDF (.nc) file</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">lev4hourly2xr</span><span class="p">(</span>
+    <span class="n">fgrds</span><span class="p">,</span>
+    <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">savefile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">interp_method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">interp_wrap</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return xarray of Diviner lev4 hourly grd tiles with time resolution tres.</span>
+
+<span class="sd">    If interp_method: Interpolate missing values along tloc axis with method</span>
+<span class="sd">    specified (e.g. &#39;nearest&#39;, &#39;linear&#39;, &#39;cubic&#39;, see xr.interpolate_na methods).</span>
+<span class="sd">    Linear seems to produce fewest sharp artifacts.</span>
+
+<span class="sd">    If savefile: save result to netCDF (.nc) file for quick I/O into xarray,</span>
+<span class="sd">    e.g. with xr.open_dataarray(savefile).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        fgrds (list of str): list of paths to .grd files (e.g. from glob)</span>
+<span class="sd">        tres (num): time resolution</span>
+<span class="sd">        interp_method (str): interpolation method (see xarray.interpolate_na)</span>
+<span class="sd">        interp_wrap (bool): interpolate around time axis (wrap around 0/24h)</span>
+<span class="sd">        ext (list): extent of ROI</span>
+<span class="sd">        savefile (str): Path to save result to netCDF (.nc) file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tres</span><span class="p">:</span>
+        <span class="c1"># Assume 8 bands (ch3 - ch9 + tbol), diurnal [24 h], infer tres [hr]</span>
+        <span class="n">tres</span> <span class="o">=</span> <span class="mi">24</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fgrds</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span><span class="p">)</span>  <span class="c1"># [hr]</span>
+    <span class="n">grids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">bands</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fgrd</span> <span class="ow">in</span> <span class="n">fgrds</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">band</span><span class="p">,</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">fgrd</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+        <span class="n">tloc</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">tres</span>  <span class="c1"># tloc in [0, 24) h</span>
+
+        <span class="c1"># Read in .grd and set its local time to tloc</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_rasterio</span><span class="p">(</span><span class="n">fgrd</span><span class="p">)</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">band</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">grid</span><span class="p">[</span><span class="s2">&quot;tloc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tloc</span>
+        <span class="n">grids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+
+        <span class="c1"># Concatenate all local time of this band into single xr.DataArray</span>
+        <span class="k">if</span> <span class="n">tloc</span> <span class="o">==</span> <span class="mi">24</span> <span class="o">-</span> <span class="n">tres</span><span class="p">:</span>
+            <span class="n">diurnal_band</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">grids</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;tloc&quot;</span><span class="p">)</span>
+            <span class="n">diurnal_band</span><span class="p">[</span><span class="s2">&quot;band&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">band</span>
+            <span class="n">bands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">diurnal_band</span><span class="p">)</span>
+            <span class="n">grids</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Concatenate all bands into single 4D xr.DataArray (lon, lat, tloc, band)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">bands</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;band&quot;</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s2">&quot;Temperature&quot;</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span>
+        <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>  <span class="c1"># TODO: bug doesn&#39;t always fix yflip</span>
+
+    <span class="c1"># Convert x, y coords to lat, lon</span>
+    <span class="k">if</span> <span class="n">ext</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">xy2lonlat_coords</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">ext</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">})</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="n">lat</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">interp_method</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Interpolate missing points on tloc</span>
+        <span class="k">if</span> <span class="n">interp_wrap</span><span class="p">:</span>
+            <span class="c1"># Cludgey handling of tloc edges. Wrap full dataset around midnight then interp</span>
+            <span class="n">postmidnight</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">tloc</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">12</span> <span class="o">-</span> <span class="n">tres</span><span class="p">))</span>
+            <span class="n">postmidnight</span><span class="p">[</span><span class="s2">&quot;tloc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">24</span><span class="p">,</span> <span class="mi">36</span><span class="p">,</span> <span class="n">tres</span><span class="p">)</span>
+            <span class="n">premidnight</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">tloc</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">24</span> <span class="o">-</span> <span class="n">tres</span><span class="p">))</span>
+            <span class="n">premidnight</span><span class="p">[</span><span class="s2">&quot;tloc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tres</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">premidnight</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">postmidnight</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;tloc&quot;</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">interpolate_na</span><span class="p">(</span><span class="s2">&quot;tloc&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">interp_method</span><span class="p">)</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span>
+            <span class="n">tloc</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">24</span> <span class="o">-</span> <span class="n">tres</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">savefile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">savefile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.load_div_filters" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">load_div_filters</span><span class="p">(</span><span class="n">fdiv_filt</span><span class="o">=</span><span class="n">FDIV_FILT</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wlunits</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="n">DIV_C</span><span class="p">)</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-cached"><code>cached</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return Diviner filter functions</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>fdiv_filt</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>path to Diviner filter functions</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.FDIV_FILT">FDIV_FILT</span></code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>scale</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>scale filter functions by FILT_SCALE</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>wlunits</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>convert wavenumber to wavelength</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>bands</code></td>
+          <td>
+                <code>tuple</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>bands to include in output</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.DIV_C">DIV_C</span></code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">load_div_filters</span><span class="p">(</span>
+    <span class="n">fdiv_filt</span><span class="o">=</span><span class="n">FDIV_FILT</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wlunits</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">bands</span><span class="o">=</span><span class="n">DIV_C</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return Diviner filter functions</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        fdiv_filt (str): path to Diviner filter functions</span>
+<span class="sd">        scale (bool): scale filter functions by FILT_SCALE</span>
+<span class="sd">        wlunits (bool): convert wavenumber to wavelength</span>
+<span class="sd">        bands (tuple): bands to include in output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">hdf</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="n">fdiv_filt</span><span class="p">)</span>
+    <span class="n">wn</span> <span class="o">=</span> <span class="n">hdf</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">hdf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c1"># reads wrong axis order</span>
+    <span class="n">div_filt</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Normalized Response&quot;</span><span class="p">,</span>
+        <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;wavenumber&quot;</span><span class="p">,</span> <span class="s2">&quot;band&quot;</span><span class="p">],</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;band&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">bands</span><span class="p">),</span> <span class="s2">&quot;wavenumber&quot;</span><span class="p">:</span> <span class="n">wn</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">scale</span><span class="p">:</span>
+        <span class="n">div_filt</span> <span class="o">=</span> <span class="n">div_filt</span> <span class="o">*</span> <span class="n">FILT_SCALE</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">if</span> <span class="n">wlunits</span><span class="p">:</span>
+        <span class="n">div_filt</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s2">&quot;wavelength&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10000</span> <span class="o">/</span> <span class="n">div_filt</span><span class="o">.</span><span class="n">wavenumber</span>
+        <span class="n">div_filt</span> <span class="o">=</span> <span class="n">div_filt</span><span class="o">.</span><span class="n">swap_dims</span><span class="p">({</span><span class="s2">&quot;wavenumber&quot;</span><span class="p">:</span> <span class="s2">&quot;wavelength&quot;</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">div_filt</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.load_div_lev4" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">load_div_lev4</span><span class="p">(</span><span class="n">roi</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">savefile</span><span class="o">=</span><span class="s1">&#39;T.nc&#39;</span><span class="p">,</span> <span class="n">smoothday</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">invert_y</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">load_cached</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">divdir</span><span class="o">=</span><span class="n">DATA_DIR_DIVINER</span> <span class="o">/</span> <span class="s1">&#39;lev4&#39;</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return Diviner lev4 data as xarray.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>roi</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>region of interest</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>ext</code></td>
+          <td>
+                <code>list</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>extent of ROI</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>savefile</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Path to save result to netCDF (.nc) file</p>
+            </div>
+          </td>
+          <td>
+                <code>&#39;T.nc&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>smoothday</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>smooth daytime temperatures with 2nd order polyfit</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>invert_y</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>invert y axis (sometimes Diviner data inverted)</p>
+            </div>
+          </td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>load_cached</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>load cached data if available</p>
+            </div>
+          </td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>divdir</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>path to Diviner data directory</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="roughness.config.DATA_DIR_DIVINER">DATA_DIR_DIVINER</span> / &#39;lev4&#39;</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">load_div_lev4</span><span class="p">(</span>
+    <span class="n">roi</span><span class="p">,</span>
+    <span class="n">ext</span><span class="p">,</span>
+    <span class="n">savefile</span><span class="o">=</span><span class="s2">&quot;T.nc&quot;</span><span class="p">,</span>
+    <span class="n">smoothday</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">invert_y</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">load_cached</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">divdir</span><span class="o">=</span><span class="n">DATA_DIR_DIVINER</span> <span class="o">/</span> <span class="s2">&quot;lev4&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return Diviner lev4 data as xarray.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        roi (str): region of interest</span>
+<span class="sd">        ext (list): extent of ROI</span>
+<span class="sd">        savefile (str): Path to save result to netCDF (.nc) file</span>
+<span class="sd">        smoothday (bool): smooth daytime temperatures with 2nd order polyfit</span>
+<span class="sd">        invert_y (bool): invert y axis (sometimes Diviner data inverted)</span>
+<span class="sd">        load_cached (bool): load cached data if available</span>
+<span class="sd">        divdir (str): path to Diviner data directory</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">roi_str</span> <span class="o">=</span> <span class="n">roi</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">savepath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">divdir</span><span class="p">)</span> <span class="o">/</span> <span class="n">roi_str</span> <span class="o">/</span> <span class="n">savefile</span>
+    <span class="k">if</span> <span class="n">load_cached</span> <span class="ow">and</span> <span class="n">savepath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="n">savepath</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading Diviner lev4 data for&quot;</span><span class="p">,</span> <span class="n">roi</span><span class="p">)</span>
+    <span class="n">dirpath</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">divdir</span><span class="p">)</span> <span class="o">/</span> <span class="n">roi_str</span>
+    <span class="n">saveraw</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">smoothday</span> <span class="k">else</span> <span class="n">savepath</span>
+    <span class="n">fgrds</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*.grd&quot;</span><span class="p">)]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">lev4hourly2xr</span><span class="p">(</span><span class="n">fgrds</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">saveraw</span><span class="p">,</span> <span class="n">interp_method</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">smoothday</span><span class="p">:</span>
+        <span class="n">T_smooth</span> <span class="o">=</span> <span class="n">smooth_daytime</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">savepath</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">T_smooth</span>
+
+    <span class="c1"># Sometimes Diviner data inverted about y - only need to fix once</span>
+    <span class="k">if</span> <span class="n">invert_y</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">load_dataarray</span><span class="p">(</span><span class="n">savepath</span><span class="p">)</span>  <span class="c1"># load imports file and closes it</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">tmp</span><span class="o">.</span><span class="n">lat</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>  <span class="c1"># invert lat</span>
+        <span class="n">tmp</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">savepath</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="n">savepath</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.load_div_t2r" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">load_div_t2r</span><span class="p">(</span><span class="n">fdiv_t2r</span><span class="o">=</span><span class="n">FDIV_T2R</span><span class="p">)</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-cached"><code>cached</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return Diviner temperature to radiance lookup table.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>fdiv_t2r</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>path to Diviner t2r lookup table</p>
+            </div>
+          </td>
+          <td>
+                <code><span title="diviner.FDIV_T2R">FDIV_T2R</span></code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">load_div_t2r</span><span class="p">(</span><span class="n">fdiv_t2r</span><span class="o">=</span><span class="n">FDIV_T2R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return Diviner temperature to radiance lookup table.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        fdiv_t2r (str): path to Diviner t2r lookup table</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">fdiv_t2r</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">delim_whitespace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="diviner.smooth_daytime" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">smooth_daytime</span><span class="p">(</span><span class="n">T_xarr</span><span class="p">,</span> <span class="n">savefile</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Return smoothed daytime T from 6 AM to 6 PM with 2nd order polyfit.</p>
+
+
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>T_xarr</code></td>
+          <td>
+                <code><span title="xarray.DataArray">DataArray</span></code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Diviner lev4 hourly temperature data</p>
+            </div>
+          </td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>savefile</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td>
+            <div class="doc-md-description">
+              <p>Path to save result to netCDF (.nc) file</p>
+            </div>
+          </td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+          <details class="quote">
+            <summary>Source code in <code>roughness/diviner.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">smooth_daytime</span><span class="p">(</span><span class="n">T_xarr</span><span class="p">,</span> <span class="n">savefile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return smoothed daytime T from 6 AM to 6 PM with 2nd order polyfit.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        T_xarr (xr.DataArray): Diviner lev4 hourly temperature data</span>
+<span class="sd">        savefile (str): Path to save result to netCDF (.nc) file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tres</span> <span class="o">=</span> <span class="n">T_xarr</span><span class="o">.</span><span class="n">tloc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">T_xarr</span><span class="o">.</span><span class="n">tloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">Tday</span> <span class="o">=</span> <span class="n">T_xarr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">tloc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="n">tres</span><span class="p">))</span>
+    <span class="n">Tsmooth</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">apply_ufunc</span><span class="p">(</span>
+        <span class="n">fit_poly_daytime</span><span class="p">,</span>
+        <span class="n">Tday</span><span class="p">,</span>
+        <span class="n">input_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;tloc&quot;</span><span class="p">]],</span>
+        <span class="n">output_core_dims</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;tloc&quot;</span><span class="p">]],</span>
+        <span class="n">vectorize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">savefile</span><span class="p">:</span>
+        <span class="n">Tsmooth</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">savefile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Tsmooth</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2023 Christian Tai Udovicic
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/nau-pixel" target="_blank" rel="noopener" title="NAU-PIXEL on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tabs"], "search": "../../assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.78eede0e.min.js"></script>
+      
+        <script src="../../docs/javascript/config.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
