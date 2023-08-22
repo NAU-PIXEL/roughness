@@ -63,7 +63,7 @@ line-length=79
 [tool.pylint.reports]
 output-format="colorized"
 reports="y"
-disable=["R0913", "C0103", "E0401", "I1101"]
+disable=["R0913", "R0915", "C0103", "E0401", "I1101"]
 msg-template="{msg_id}:{line:3d},{column}: {obj}: {msg}"
 
 [tool.pytest.ini_options]

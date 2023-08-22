@@ -12,10 +12,10 @@ Options:
 Examples:
     roughness --download
 """
-import os
 import argparse
 import subprocess
-from roughness import __version__, config
+from roughness import __version__
+from roughness.config import DATA_DIR, ZENODO_DOI, FDATA_VERSION
 
 
 def run():
@@ -39,8 +39,12 @@ def run():
     # Run the cli
     args = parser.parse_args()
     if args.download:
-        os.chdir(config.DATA_DIR)
-        subprocess.call(["zenodo_get", "-R", "1", config.ZENODO_DOI])
+        cmdargs = ("-R", "1", "-o", DATA_DIR, ZENODO_DOI)
+        r = subprocess.call(["zenodo_get", *cmdargs])
+        if r == 0:  # If successful, update data version
+            # Store wget call in FDATA_VERSION (urls change if data changes)
+            cmdargs = ("-w", FDATA_VERSION, "-o", DATA_DIR, ZENODO_DOI)
+            subprocess.call(["zenodo_get", *cmdargs])
 
 
 if __name__ == "__main__":

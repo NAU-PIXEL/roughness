@@ -243,7 +243,7 @@ def make_zsurf(n=10000, H=0.8, qr=100, fout=FZSURF, write=True, default=False):
     zsurf = np.real_if_close(zsurf)
 
     # Because we are going to scale to various RMS slopes we want to normalize.
-    norm_zsurf = zsurf  # (zsurf - np.mean(zsurf)) / np.std(zsurf)
+    norm_zsurf = (zsurf - np.mean(zsurf)) / np.std(zsurf)
 
     # Voila. A real array of height values with self-affine roughness.
     # Save it!

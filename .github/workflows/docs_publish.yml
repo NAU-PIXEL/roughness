@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-  release:
-    branches:
-      - main
 
 jobs:
   deploy:
@@ -29,19 +26,24 @@ jobs:
         with:
           path: .venv
           key: venv-ubuntu-latest-docs-${{ hashFiles('**/poetry.lock') }}
-      - if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'  
+      - if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         name: Install dependencies
         run: poetry install --no-interaction --with docs
-      
+
       # Download default datasets if not cached
       - name: Get data path
-        run: export DATA_PATH=$(poetry run python -c "from roughness import config as cfg; print(cfg.DATA_DIR)")
+        run: export DATA_DIR=$(poetry run python -c "import roughness; print(roughness.config.DATA_DIR)")
+      - name: Get data version path
+        run : export FDATA_VERSION=$(poetry run python -c "import roughness; print(roughness.config.FDATA_VERSION)")
       - name: Load cached datasets
         id: cached-datasets
         uses: actions/cache@v3
         with:
-          path: ${DATA_PATH}
-          key: datasets-ubuntu-latest-docs-${{ hashFiles('**/*.nc') }}
+          path: ${DATA_DIR}
+          key: datasets-docs-${{ hashFiles('${FDATA_VERSION}') }}
+          restore-keys: |
+            datasets-docs-
+            datasets-
       - if: steps.cached-datasets.outputs.cache-hit != 'true'
         name: Download datasets
         run: poetry run roughness -d
