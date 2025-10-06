@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 
 
-def rotate_az_lookup(los_table, target_az, az0=None):
+def rotate_az_lookup(los_table, target_az, az0=0):
     """
     Return los_table rotated from az0 to nearest target_az in azcoords.
 
@@ -22,16 +22,14 @@ def rotate_az_lookup(los_table, target_az, az0=None):
     -------
     rotated_los_table (array): los_table rotated on az axis (dims: az, theta)
     """
-    if az0 is None:
-        az0 = float(los_table.attrs.get("az0", AZ0))
+    
     azcoords = los_table.az.values
-    ind0 = np.argmin(np.abs(azcoords - az0))
-    ind = np.argmin(np.abs(azcoords - target_az))
-    az_shift = ind - ind0
+    targ = (target_az+az0)%360
+    az_shift = np.argmin(np.abs(azcoords - targ))
     return los_table.roll(az=az_shift, roll_coords=False)
 
 
-def get_LUT(inLUT,params,var=None,rotate=None):
+def get_LUT(inLUT,params,var=None,rotate=None,az0=0):
 
     if not isinstance(inLUT, xr.Dataset):
         lut = load_XarrayDS(inLUT)
@@ -50,13 +48,23 @@ def get_LUT(inLUT,params,var=None,rotate=None):
             )
         
     if rotate is not None:
-        lut = rotate_az_lookup(lut, rotate)
+        lut = rotate_az_lookup(lut, rotate, az0)
         
     selparams = {k: v for k, v in params.items() if v in lut.coords[k]}
     intparams = {k: v for k, v in params.items() if k not in selparams}
-    out = lut.sel(selparams).interp(intparams, method = "linear")
+    out = lut.sel(selparams).interp(intparams, method = "linear").to_numpy()
     
     return out
+
+def get_tiled_theta(inLUT):
+    if not isinstance(inLUT, xr.Dataset):
+        lut = load_XarrayDS(inLUT)
+    else:
+        lut = inLUT
+    
+    theta = lut.theta.values
+    thetas = np.tile(theta,(36,1))
+    return thetas
 
 @lru_cache(maxsize=2)
 def load_XarrayDS(inpath):

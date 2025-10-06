@@ -6,7 +6,9 @@ import numpy as np
 import numpy.f2py
 import xarray as xr
 import jupytext
-from . import config as cfg
+import sys
+sys.path.append("/home/chaberle/GitHab/roughness/modules/")
+import config as cfg
 
 # Line of sight helpers
 def lookup2xarray(lookups, rms_coords=None, inc_coords=None, nodata=-999):
